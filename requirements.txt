@@ -1,8 +1,9 @@
 streamlit==1.24.0
-streamlit-extras==0.1.0  # or the latest version available
+streamlit-extras==0.4.3  # Use the latest available version
 pandas==1.5.3
 seaborn==0.11.2
 matplotlib==3.7.1
 numpy==1.24.2
 bcrypt==3.2.0
-mysql-connector-python==8.0.33  # or the latest version available
+mysql-connector-python==8.0.33
+
