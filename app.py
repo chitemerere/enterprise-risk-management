@@ -15,6 +15,7 @@ import bcrypt
 from datetime import datetime
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
+import pymysql
 from sqlalchemy import create_engine, text
 
 
@@ -26,9 +27,16 @@ def connect_to_db():
         host = 'pmsanalytics.mysql.database.azure.com'
         database = 'riskassessment'
         ssl_ca = 'DigiCertGlobalRootCA.crt.pem'
-        
+
+        # Create a connection string with a timeout parameter
         connection_string = f'mysql+pymysql://{username}:{password}@{host}/{database}?ssl_ca={ssl_ca}'
-        engine = create_engine(connection_string)
+        
+        # Additional connect arguments for timeout
+        connect_args = {
+            'connect_timeout': 20  # Setting a 20-second timeout for connection
+        }
+        
+        engine = create_engine(connection_string, connect_args=connect_args)
         with engine.connect() as connection:
             result = connection.execute(text("SELECT 1"))
             result.fetchone()
@@ -37,6 +45,25 @@ def connect_to_db():
     except Exception as err:
         st.sidebar.warning(f"Error: {err}")
         return None
+    
+# def connect_to_db():
+#     try:
+#         username = 'chitemerere'
+#         password = 'ruvimboML55AMG%'
+#         host = 'pmsanalytics.mysql.database.azure.com'
+#         database = 'riskassessment'
+#         ssl_ca = 'DigiCertGlobalRootCA.crt.pem'
+        
+#         connection_string = f'mysql+pymysql://{username}:{password}@{host}/{database}?ssl_ca={ssl_ca}'
+#         engine = create_engine(connection_string)
+#         with engine.connect() as connection:
+#             result = connection.execute(text("SELECT 1"))
+#             result.fetchone()
+
+#         return engine
+#     except Exception as err:
+#         st.sidebar.warning(f"Error: {err}")
+#         return None
 
 def fetch_risk_register_from_db():
     engine = connect_to_db()
