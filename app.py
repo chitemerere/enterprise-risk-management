@@ -19,26 +19,12 @@ from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 
 # Database connection
-def connect_to_db():
-    try:
-        connection = mysql.connector.connect(
-            host='localhost',
-            user='root',
-            password='ruvimboML55AMG',
-            ssl_disabled=True,
-            database='riskassessment'
-        )
-        return connection
-    except mysql.connector.Error as err:
-        st.sidebar.warning(f"Error: {err}")
-        return None
-    
 # def connect_to_db():
 #     try:
 #         connection = mysql.connector.connect(
-#             host='pmsanalytics.mysql.database.azure.com',
-#             user='chitemerere',
-#             password='ruvimboML55AMG%',
+#             host='localhost',
+#             user='root',
+#             password='ruvimboML55AMG',
 #             ssl_disabled=True,
 #             database='riskassessment'
 #         )
@@ -46,6 +32,22 @@ def connect_to_db():
 #     except mysql.connector.Error as err:
 #         st.sidebar.warning(f"Error: {err}")
 #         return None
+    
+def connect_to_db():
+    try:
+        connection = mysql.connector.connect(
+            host='pmsanalytics.mysql.database.azure.com',
+            user='chitemerere',
+            password='ruvimboML55AMG%',
+            ssl_disabled=False,
+            database='riskassessment',
+            port = 3306,
+            ssl_ca="DigiCertGlobalRootCA.crt.pem"
+        )
+        return connection
+    except mysql.connector.Error as err:
+        st.sidebar.warning(f"Error: {err}")
+        return None
 
    
 def fetch_risk_register_from_db():
@@ -258,7 +260,7 @@ def register(username, password):
         
 def main():
   
-    st.markdown('### Integrated Risk Matrix and Assessment Application')
+    st.markdown('### Enterprise Risk Management Application')
     st.image("logo.png", width=200)
 
     # Check if 'logged_in' is in session state
@@ -379,7 +381,7 @@ def main():
         # Tabs for the application
         tab = st.sidebar.selectbox(
             'Choose a function',
-            ('Main Application', 'Risks Overview','Adjusted Risk Matrices' ,'Delete Risk', 'Update Risk')
+            ('Main Application', 'Risks Overview','Risks Owners & Control Owners','Adjusted Risk Matrices' ,'Delete Risk', 'Update Risk')
         )
         
         # Initialize the session state if it doesn't exist
@@ -570,7 +572,7 @@ def main():
             if 'risk_data' not in st.session_state:
                 st.session_state['risk_data'] = fetch_all_from_risk_data()
                
-            st.subheader('Risks Overview')
+            st.subheader('Risks Dashboard')
             
             # 1. Load the data
             risk_data = st.session_state['risk_data']
@@ -644,7 +646,72 @@ def main():
             # Show the plot
             plt.tight_layout()
             st.pyplot(fig)
+        ######
+        elif tab == 'Risks Owners & Control Owners':
+            # Custom CSS for adjusting metric card font size
+            # Custom CSS with increased specificity
+            st.markdown("""
+            <style>
+                /* Adjusting font size for metric card labels */
+                body .stMetric span:first-child {
+                    font-size: 12px !important; 
+                }
+                /* Adjusting font size for metric card values */
+                body .stMetric span:last-child {
+                    font-size: 16px !important;
+                }
+            </style>
+            """, unsafe_allow_html=True)
+                        
+            # Check and fetch data if not in session_state
+            if 'risk_data' not in st.session_state:
+                st.session_state['risk_data'] = fetch_all_from_risk_data()
+               
+            st.subheader('Risks Owners & Control Owners')
+            
+            # 1. Load the data
+            risk_data = st.session_state['risk_data']
+            
+                        
+            # Bar plot for risk types
+            # Count the occurrences for each risk owner
+            risk_owners_counts = risk_data['risk_owners'].value_counts()
 
+            # Plotting the bar chart with counts inside the bars
+            fig=plt.figure(figsize=(10,6))
+            bars = plt.bar(risk_owners_counts.index, risk_owners_counts.values, color='skyblue')
+            plt.title("Risk Owners Count")
+            plt.ylabel("Risk Count")
+            plt.xticks(rotation=45)
+
+            # Display counts inside the bars
+            for bar in bars:
+                yval = bar.get_height()
+                plt.text(bar.get_x() + bar.get_width()/2, yval - 0.5, yval, ha='center', va='bottom', color='black')
+
+            # Show the plot
+            plt.tight_layout()
+            st.pyplot(fig)
+            
+            # Bar plot for risk types
+            # Count the occurrences for each Control owner
+            risk_control_owners_counts = risk_data['control_owners'].value_counts()
+
+            # Plotting the bar chart with counts inside the bars
+            fig=plt.figure(figsize=(10,6))
+            bars = plt.bar(risk_control_owners_counts.index, risk_control_owners_counts.values, color='skyblue')
+            plt.title("Risk Control Owners Count")
+            plt.ylabel("Risk Count")
+            plt.xticks(rotation=45)
+
+            # Display counts inside the bars
+            for bar in bars:
+                yval = bar.get_height()
+                plt.text(bar.get_x() + bar.get_width()/2, yval - 0.5, yval, ha='center', va='bottom', color='black')
+
+            # Show the plot
+            plt.tight_layout()
+            st.pyplot(fig)
         ######
         elif tab == 'Adjusted Risk Matrices':
             # Define the color_mapping dictionary
