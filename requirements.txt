@@ -7,4 +7,5 @@ numpy==1.24.2
 bcrypt==3.2.0
 mysql-connector-python==8.0.33
 sqlalchemy==2.0.31
+pymysql==1.0.2
 
