@@ -17,6 +17,10 @@ from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 import pymysql
 from sqlalchemy import create_engine, text
+import logging
+
+# Configure logging
+logging.basicConfig(filename='application.log', level=logging.INFO)
 
 def connect_to_db():
     try:
@@ -35,27 +39,8 @@ def connect_to_db():
         return engine
     except Exception as err:
         st.sidebar.warning(f"Error: {err}")
+        logging.error(f"Database connection error: {err}")
         return None
-
- 
-# def connect_to_db():
-#     try:
-#         username = 'chitemerere'
-#         password = 'ruvimboML55AMG%'
-#         host = 'pmsanalytics.mysql.database.azure.com'
-#         database = 'riskassessment'
-#         ssl_ca = 'DigiCertGlobalRootCA.crt.pem'
-        
-#         connection_string = f'mysql+pymysql://{username}:{password}@{host}/{database}?ssl_ca={ssl_ca}'
-#         engine = create_engine(connection_string)
-#         with engine.connect() as connection:
-#             result = connection.execute(text("SELECT 1"))
-#             result.fetchone()
-
-#         return engine
-#     except Exception as err:
-#         st.sidebar.warning(f"Error: {err}")
-#         return None
 
 def fetch_risk_register_from_db():
     engine = connect_to_db()
@@ -80,36 +65,49 @@ def insert_uploaded_data_to_db(dataframe):
     engine = connect_to_db()
     if engine:
         with engine.connect() as connection:
-            for _, row in dataframe.iterrows():
-                try:
-                    date_last_updated = datetime.strptime(row['date_last_updated'], '%Y-%m-%d').date()
-                except ValueError:
-                    date_last_updated = None
-                query = text("""
-                    INSERT INTO risk_data (risk_description, risk_type, updated_by, date_last_updated, 
-                                           cause_consequences, risk_owners, inherent_risk_probability, 
-                                           inherent_risk_impact, inherent_risk_rating, control_owners, 
-                                           residual_risk_probability, residual_risk_impact, 
-                                           residual_risk_rating, controls) 
-                    VALUES (:risk_description, :risk_type, :updated_by, :date_last_updated, :cause_consequences, 
-                            :risk_owners, :inherent_risk_probability, :inherent_risk_impact, :inherent_risk_rating, 
-                            :control_owners, :residual_risk_probability, :residual_risk_impact, :residual_risk_rating, 
-                            :controls)
-                """)
-                connection.execute(query, row.to_dict())
+            transaction = connection.begin()
+            try:
+                for _, row in dataframe.iterrows():
+                    try:
+                        date_last_updated = datetime.strptime(row['date_last_updated'], '%Y-%m-%d').date()
+                    except ValueError:
+                        date_last_updated = None
+                    query = text("""
+                        INSERT INTO risk_data (risk_description, risk_type, updated_by, date_last_updated, 
+                                               cause_consequences, risk_owners, inherent_risk_probability, 
+                                               inherent_risk_impact, inherent_risk_rating, control_owners, 
+                                               residual_risk_probability, residual_risk_impact, 
+                                               residual_risk_rating, controls) 
+                        VALUES (:risk_description, :risk_type, :updated_by, :date_last_updated, :cause_consequences, 
+                                :risk_owners, :inherent_risk_probability, :inherent_risk_impact, :inherent_risk_rating, 
+                                :control_owners, :residual_risk_probability, :residual_risk_impact, :residual_risk_rating, 
+                                :controls)
+                    """)
+                    connection.execute(query, row.to_dict())
+                transaction.commit()
+                st.sidebar.success("Data uploaded successfully!")
+            except Exception as e:
+                transaction.rollback()
+                logging.error(f"Error inserting data: {e}")
+                st.sidebar.error(f"Error inserting data: {e}")
         engine.dispose()
 
 def insert_into_risk_data(data):
     engine = connect_to_db()
     if engine:
         with engine.connect() as connection:
-            placeholders = ', '.join([':{}'.format(key) for key in data.keys()])
-            columns = ', '.join([f"`{key}`" for key in data.keys()])
-            query = text(f"INSERT INTO risk_data ({columns}) VALUES ({placeholders})")
+            transaction = connection.begin()
             try:
+                placeholders = ', '.join([':{}'.format(key) for key in data.keys()])
+                columns = ', '.join([f"`{key}`" for key in data.keys()])
+                query = text(f"INSERT INTO risk_data ({columns}) VALUES ({placeholders})")
                 connection.execute(query, data)
+                transaction.commit()
+                logging.info(f"Inserted data: {data}")
             except Exception as e:
+                transaction.rollback()
                 st.write(f"Error during insertion to risk_data: {e}")
+                logging.error(f"Error during insertion: {e}")
         engine.dispose()
 
 def fetch_all_from_risk_data():
@@ -125,18 +123,40 @@ def update_risk_data_by_risk_description(risk_description, data):
     engine = connect_to_db()
     if engine:
         with engine.connect() as connection:
-            set_clause = ", ".join([f"`{key}` = :{key}" for key in data.keys()])
-            query = text(f"UPDATE risk_data SET {set_clause} WHERE risk_description = :risk_description")
-            connection.execute(query, **data, risk_description=risk_description)
+            transaction = connection.begin()
+            try:
+                # Prepare the SET clause with placeholders
+                set_clause = ", ".join([f"{key} = :{key}" for key in data.keys()])
+                # Construct the SQL query
+                query = text(f"UPDATE risk_data SET {set_clause} WHERE risk_description = :risk_description")
+                # Add the risk_description to the data dictionary
+                data['risk_description'] = risk_description
+                # Execute the query with the data dictionary
+                connection.execute(query, data)
+                transaction.commit()
+                st.success("Risk updated successfully.")
+                logging.info(f"Updated risk data for {risk_description}: {data}")
+            except Exception as e:
+                transaction.rollback()
+                st.error(f"Error updating risk: {e}")
+                logging.error(f"Error updating risk {risk_description}: {e}")
         engine.dispose()
 
 def delete_from_risk_data_by_risk_description(risk_description):
     engine = connect_to_db()
     if engine:
         with engine.connect() as connection:
-            query = text("DELETE FROM risk_data WHERE TRIM(risk_description) = :risk_description")
-            result = connection.execute(query, {"risk_description": risk_description})
-            print(f"Rows affected by delete operation: {result.rowcount}")
+            transaction = connection.begin()
+            try:
+                query = text("DELETE FROM risk_data WHERE TRIM(risk_description) = :risk_description")
+                result = connection.execute(query, {"risk_description": risk_description})
+                transaction.commit()
+                st.success(f"Risk '{risk_description}' deleted.")
+                logging.info(f"Deleted risk description: {risk_description}, Rows affected: {result.rowcount}")
+            except Exception as e:
+                transaction.rollback()
+                st.error(f"Error deleting risk: {e}")
+                logging.error(f"Error deleting risk {risk_description}: {e}")
         engine.dispose()
 
 def get_risk_id_by_description(risk_description):
@@ -148,14 +168,17 @@ def get_risk_id_by_description(risk_description):
             risk_id = result.fetchone()
         engine.dispose()
         return risk_id[0] if risk_id else None
-
+    
 def fetch_risks_outside_appetite_from_risk_data(risk_appetite):
     engine = connect_to_db()
     if engine:
-        placeholders = ', '.join([':{}'.format(i) for i in range(len(risk_appetite))])
-        query = text(f"SELECT * FROM risk_data WHERE residual_risk_rating NOT IN ({placeholders})")
         with engine.connect() as connection:
-            result = connection.execute(query, dict(enumerate(risk_appetite)))
+            # Use a parameterized query for a list of values
+            placeholders = ', '.join([f":rating_{i}" for i in range(len(risk_appetite))])
+            query = text(f"SELECT * FROM risk_data WHERE residual_risk_rating NOT IN ({placeholders})")
+            # Create a dictionary with unique parameter names for each rating
+            params = {f"rating_{i}": rating for i, rating in enumerate(risk_appetite)}
+            result = connection.execute(query, params)
             data = pd.DataFrame(result.fetchall(), columns=result.keys())
         engine.dispose()
         return data
@@ -165,14 +188,93 @@ def insert_risks_into_risk_register(data):
     engine = connect_to_db()
     if engine:
         with engine.connect() as connection:
-            placeholders = ', '.join([':{}'.format(key) for key in data.keys()])
-            columns = ', '.join(data.keys())
-            query = text(f"INSERT INTO risk_register ({columns}) VALUES ({placeholders})")
+            transaction = connection.begin()
             try:
-                connection.execute(query, data)
+                if isinstance(data, pd.DataFrame):
+                    # Convert the DataFrame to a list of dictionaries
+                    data_list = data.to_dict(orient='records')
+                else:
+                    data_list = [data]
+                
+                for record in data_list:
+                    # Inspect the data before insertion
+                    logging.info(f"Attempting to insert record: {record}")
+                    
+                    # Ensure we only use columns that exist in the database and are relevant
+                    allowed_columns = ['risk_description', 'risk_type', 'updated_by', 'date_last_updated', 
+                                       'cause_consequences', 'risk_owners', 'inherent_risk_probability', 
+                                       'inherent_risk_impact', 'inherent_risk_rating', 'control_owners', 
+                                       'residual_risk_probability', 'residual_risk_impact', 'residual_risk_rating', 
+                                       'controls']
+                    record = {k: v for k, v in record.items() if k in allowed_columns}
+                    
+                    placeholders = ', '.join([f":{key}" for key in record.keys()])
+                    columns = ', '.join(record.keys())
+                    query = text(f"INSERT INTO risk_register ({columns}) VALUES ({placeholders})")
+                    logging.info(f"Executing query: {query} with parameters: {record}")
+                    connection.execute(query, **record)
+                
+                transaction.commit()
+                logging.info(f"Inserted into risk_register: {data_list}")
             except Exception as e:
+                transaction.rollback()
                 st.write(f"Error during insertion: {e}")
+                logging.error(f"Error inserting into risk_register: {e}")
         engine.dispose()
+
+
+# def insert_risks_into_risk_register(data):
+#     engine = connect_to_db()
+#     if engine:
+#         with engine.connect() as connection:
+#             transaction = connection.begin()
+#             try:
+#                 if isinstance(data, pd.DataFrame):
+#                     # Convert the DataFrame to a list of dictionaries
+#                     data_list = data.to_dict(orient='records')
+#                 else:
+#                     data_list = [data]
+                
+#                 for record in data_list:
+#                     # Inspect the data before insertion
+#                     logging.info(f"Attempting to insert record: {record}")
+                    
+#                     # Ensure we only use columns that exist in the database and are relevant
+#                     record = {k: v for k, v in record.items() if k in ['risk_description', 'risk_type', 'updated_by', 'date_last_updated', 'cause_consequences', 'risk_owners', 'inherent_risk_probability', 'inherent_risk_impact', 'inherent_risk_rating', 'control_owners', 'residual_risk_probability', 'residual_risk_impact', 'residual_risk_rating', 'controls']}
+                    
+#                     placeholders = ', '.join([f":{key}" for key in record.keys()])
+#                     columns = ', '.join(record.keys())
+#                     query = text(f"INSERT INTO risk_register ({columns}) VALUES ({placeholders})")
+#                     logging.info(f"Executing query: {query}, with parameters: {record}")
+#                     connection.execute(query, **record)
+                
+#                 transaction.commit()
+#                 logging.info(f"Inserted into risk_register: {data_list}")
+#             except Exception as e:
+#                 transaction.rollback()
+#                 st.write(f"Error during insertion: {e}")
+#                 logging.error(f"Error inserting into risk_register: {e}")
+#         engine.dispose()
+
+
+
+# def insert_risks_into_risk_register(data):
+#     engine = connect_to_db()
+#     if engine:
+#         with engine.connect() as connection:
+#             transaction = connection.begin()
+#             try:
+#                 placeholders = ', '.join([':{}'.format(key) for key in data.keys()])
+#                 columns = ', '.join(data.keys())
+#                 query = text(f"INSERT INTO risk_register ({columns}) VALUES ({placeholders})")
+#                 connection.execute(query, data)
+#                 transaction.commit()
+#                 logging.info(f"Inserted into risk_register: {data}")
+#             except Exception as e:
+#                 transaction.rollback()
+#                 st.write(f"Error during insertion: {e}")
+#                 logging.error(f"Error inserting into risk_register: {e}")
+#         engine.dispose()
 
 def fetch_all_from_risk_register():
     engine = connect_to_db()
@@ -184,39 +286,67 @@ def fetch_all_from_risk_register():
     return pd.DataFrame()
 
 def update_risk_register_by_risk_description(risk_description, data):
-    engine = connect_to_db()
-    if engine:
-        with engine.connect() as connection:
-            set_clause = ", ".join([f"{key} = :{key}" for key in data.keys()])
-            query = text(f"UPDATE risk_register SET {set_clause} WHERE risk_description = :risk_description")
-            connection.execute(query, **data, risk_description=risk_description)
-        engine.dispose()
+    if 'user_role' in st.session_state and st.session_state.user_role == 'admin':
+        engine = connect_to_db()
+        if engine:
+            with engine.connect() as connection:
+                transaction = connection.begin()
+                try:
+                    set_clause = ", ".join([f"{key} = :{key}" for key in data.keys()])
+                    query = text(f"UPDATE risk_register SET {set_clause} WHERE risk_description = :risk_description")
+                    connection.execute(query, data)
+                    transaction.commit()
+                    st.success("Risk updated successfully.")
+                    logging.info(f"Updated risk_register for {risk_description}: {data}")
+                except Exception as e:
+                    transaction.rollback()
+                    st.error(f"Error updating risk register: {e}")
+                    logging.error(f"Error updating risk register {risk_description}: {e}")
+            engine.dispose()
+    else:
+        st.error("You do not have permission to update risks.")
 
 def delete_from_risk_register_by_risk_description(risk_description):
-    engine = connect_to_db()
-    if engine:
-        with engine.connect() as connection:
-            query = text("DELETE FROM risk_register WHERE risk_description = :risk_description")
-            connection.execute(query, {"risk_description": risk_description})
-        engine.dispose()
+    if 'user_role' in st.session_state and st.session_state.user_role == 'admin':
+        engine = connect_to_db()
+        if engine:
+            with engine.connect() as connection:
+                transaction = connection.begin()
+                try:
+                    query = text("DELETE FROM risk_register WHERE risk_description = :risk_description")
+                    connection.execute(query, {"risk_description": risk_description})
+                    transaction.commit()
+                    st.success(f"Risk '{risk_description}' deleted.")
+                    logging.info(f"Deleted risk_register description: {risk_description}")
+                except Exception as e:
+                    transaction.rollback()
+                    st.error(f"Error deleting risk: {e}")
+                    logging.error(f"Error deleting risk {risk_description}: {e}")
+            engine.dispose()
+    else:
+        st.error("You do not have permission to delete risks.")
 
 def login(username, password):
     engine = connect_to_db()
     if engine is None:
         return False
-    
+
     try:
         with engine.connect() as connection:
-            query = text("SELECT password FROM credentials WHERE username = :username")
+            query = text("SELECT password, role FROM credentials WHERE username = :username")
             result = connection.execute(query, {"username": username})
             user = result.fetchone()
-            
+
             if user and bcrypt.checkpw(password.encode('utf-8'), user[0].encode('utf-8')):
+                st.session_state.logged_in = True
+                st.session_state.user_role = user[1]  # Store user role
+                logging.info(f"User {username} logged in with role {user[1]}")
                 return True
             else:
                 return False
     except Exception as err:
         st.sidebar.warning(f"Error during login: {err}")
+        logging.error(f"Login error for user {username}: {err}")
         return False
 
 def register(username, password):
@@ -227,9 +357,11 @@ def register(username, password):
             with engine.connect() as connection:
                 query = text("INSERT INTO credentials (username, password) VALUES (:username, :password)")
                 connection.execute(query, {"username": username, "password": hashed_password.decode('utf-8')})
+                logging.info(f"Registered new user {username}")
             return True
         except Exception as err:
             st.sidebar.warning(f"Error: {err}")
+            logging.error(f"Registration error for user {username}: {err}")
             return False
 
 def main():
@@ -246,19 +378,23 @@ def main():
         if st.sidebar.button("Login"):
             if login(username, password):
                 st.sidebar.success("Logged in successfully!")
-                st.session_state.logged_in = True
             else:
                 st.sidebar.error("Invalid credentials")
 
-        st.sidebar.subheader("Register")
+    if st.session_state.logged_in and st.session_state.user_role == 'admin':
+        st.sidebar.subheader("Register New User")
         new_username = st.sidebar.text_input("New Username", key='reg_username')
         new_password = st.sidebar.text_input("New Password", type="password", key='reg_password')
         if st.sidebar.button("Register"):
             if register(new_username, new_password):
-                st.sidebar.success("Registered successfully! You can now login.")
+                st.sidebar.success("Registered successfully! The new user can now log in.")
             else:
-                st.sidebar.error("Registration failed. Perhaps the username is already taken.")
-    else:
+                st.sidebar.error("Registration failed. The username might already be taken.")
+    elif st.session_state.logged_in:
+        st.sidebar.info("Only admin users can register new users.")
+
+    if st.session_state.logged_in:
+        # Main application content goes here
         def plot_risk_matrix():
             fig = plt.figure()
             plt.subplots_adjust(wspace=0, hspace=0)
@@ -338,11 +474,12 @@ def main():
 
         def calculate_risk_rating(probability, impact):
             return risk_rating_dict[(risk_levels[probability], risk_levels[impact])]
-        
+
         tab = st.sidebar.selectbox(
             'Choose a function',
-            ('Main Application', 'Risks Overview','Risks Owners & Control Owners','Adjusted Risk Matrices' ,'Delete Risk', 'Update Risk')
+            ('Main Application', 'Risks Overview', 'Risks Owners & Control Owners', 'Adjusted Risk Matrices', 'Delete Risk', 'Update Risk')
         )
+
         
         if 'risk_data' not in st.session_state:
             st.session_state['risk_data'] = fetch_risk_register_from_db()
@@ -741,7 +878,6 @@ def main():
             if not st.session_state['risk_data'].empty:
                 risk_to_delete = st.selectbox('Select a risk to delete', fetch_all_from_risk_data()['risk_description'].tolist())
                 if st.button('Delete Risk'):
-                    print("Delete Risk button pressed.")
                     delete_from_risk_data_by_risk_description(risk_to_delete)
                     st.session_state['risk_data'] = fetch_all_from_risk_data()
                     st.write("Risk deleted.")
