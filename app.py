@@ -119,45 +119,54 @@ def fetch_all_from_risk_data():
         return data
     return pd.DataFrame()
 
-def update_risk_data_by_risk_description(risk_description, data):
-    engine = connect_to_db()
-    if engine:
-        with engine.connect() as connection:
-            transaction = connection.begin()
-            try:
-                # Prepare the SET clause with placeholders
-                set_clause = ", ".join([f"{key} = :{key}" for key in data.keys()])
-                # Construct the SQL query
-                query = text(f"UPDATE risk_data SET {set_clause} WHERE risk_description = :risk_description")
-                # Add the risk_description to the data dictionary
-                data['risk_description'] = risk_description
-                # Execute the query with the data dictionary
-                connection.execute(query, data)
-                transaction.commit()
-                st.success("Risk updated successfully.")
-                logging.info(f"Updated risk data for {risk_description}: {data}")
-            except Exception as e:
-                transaction.rollback()
-                st.error(f"Error updating risk: {e}")
-                logging.error(f"Error updating risk {risk_description}: {e}")
-        engine.dispose()
-
 def delete_from_risk_data_by_risk_description(risk_description):
-    engine = connect_to_db()
-    if engine:
-        with engine.connect() as connection:
-            transaction = connection.begin()
-            try:
-                query = text("DELETE FROM risk_data WHERE TRIM(risk_description) = :risk_description")
-                result = connection.execute(query, {"risk_description": risk_description})
-                transaction.commit()
-                st.success(f"Risk '{risk_description}' deleted.")
-                logging.info(f"Deleted risk description: {risk_description}, Rows affected: {result.rowcount}")
-            except Exception as e:
-                transaction.rollback()
-                st.error(f"Error deleting risk: {e}")
-                logging.error(f"Error deleting risk {risk_description}: {e}")
-        engine.dispose()
+    if 'user_role' in st.session_state and st.session_state.user_role == 'admin':
+        engine = connect_to_db()
+        if engine:
+            with engine.connect() as connection:
+                transaction = connection.begin()
+                try:
+                    query = text("DELETE FROM risk_data WHERE TRIM(risk_description) = :risk_description")
+                    result = connection.execute(query, {"risk_description": risk_description})
+                    transaction.commit()
+                    if result.rowcount > 0:
+                        st.success(f"Risk '{risk_description}' deleted.")
+                        logging.info(f"Deleted risk description: {risk_description}, Rows affected: {result.rowcount}")
+                    else:
+                        st.warning(f"No risk found with description '{risk_description}'.")
+                except Exception as e:
+                    transaction.rollback()
+                    st.error(f"Error deleting risk: {e}")
+                    logging.error(f"Error deleting risk {risk_description}: {e}")
+            engine.dispose()
+    else:
+        st.error("You do not have permission to delete risks.")
+
+def update_risk_data_by_risk_description(risk_description, data):
+    if 'user_role' in st.session_state and st.session_state.user_role == 'admin':
+        engine = connect_to_db()
+        if engine:
+            with engine.connect() as connection:
+                transaction = connection.begin()
+                try:
+                    set_clause = ", ".join([f"{key} = :{key}" for key in data.keys()])
+                    query = text(f"UPDATE risk_data SET {set_clause} WHERE risk_description = :risk_description")
+                    data['risk_description'] = risk_description
+                    result = connection.execute(query, data)
+                    transaction.commit()
+                    if result.rowcount > 0:
+                        st.success("Risk updated successfully.")
+                        logging.info(f"Updated risk data for {risk_description}: {data}")
+                    else:
+                        st.warning(f"No risk found with description '{risk_description}'.")
+                except Exception as e:
+                    transaction.rollback()
+                    st.error(f"Error updating risk: {e}")
+                    logging.error(f"Error updating risk {risk_description}: {e}")
+            engine.dispose()
+    else:
+        st.error("You do not have permission to update risks.")
+
 
 def get_risk_id_by_description(risk_description):
     engine = connect_to_db()
@@ -222,59 +231,6 @@ def insert_risks_into_risk_register(data):
                 logging.error(f"Error inserting into risk_register: {e}")
         engine.dispose()
 
-
-# def insert_risks_into_risk_register(data):
-#     engine = connect_to_db()
-#     if engine:
-#         with engine.connect() as connection:
-#             transaction = connection.begin()
-#             try:
-#                 if isinstance(data, pd.DataFrame):
-#                     # Convert the DataFrame to a list of dictionaries
-#                     data_list = data.to_dict(orient='records')
-#                 else:
-#                     data_list = [data]
-                
-#                 for record in data_list:
-#                     # Inspect the data before insertion
-#                     logging.info(f"Attempting to insert record: {record}")
-                    
-#                     # Ensure we only use columns that exist in the database and are relevant
-#                     record = {k: v for k, v in record.items() if k in ['risk_description', 'risk_type', 'updated_by', 'date_last_updated', 'cause_consequences', 'risk_owners', 'inherent_risk_probability', 'inherent_risk_impact', 'inherent_risk_rating', 'control_owners', 'residual_risk_probability', 'residual_risk_impact', 'residual_risk_rating', 'controls']}
-                    
-#                     placeholders = ', '.join([f":{key}" for key in record.keys()])
-#                     columns = ', '.join(record.keys())
-#                     query = text(f"INSERT INTO risk_register ({columns}) VALUES ({placeholders})")
-#                     logging.info(f"Executing query: {query}, with parameters: {record}")
-#                     connection.execute(query, **record)
-                
-#                 transaction.commit()
-#                 logging.info(f"Inserted into risk_register: {data_list}")
-#             except Exception as e:
-#                 transaction.rollback()
-#                 st.write(f"Error during insertion: {e}")
-#                 logging.error(f"Error inserting into risk_register: {e}")
-#         engine.dispose()
-
-
-
-# def insert_risks_into_risk_register(data):
-#     engine = connect_to_db()
-#     if engine:
-#         with engine.connect() as connection:
-#             transaction = connection.begin()
-#             try:
-#                 placeholders = ', '.join([':{}'.format(key) for key in data.keys()])
-#                 columns = ', '.join(data.keys())
-#                 query = text(f"INSERT INTO risk_register ({columns}) VALUES ({placeholders})")
-#                 connection.execute(query, data)
-#                 transaction.commit()
-#                 logging.info(f"Inserted into risk_register: {data}")
-#             except Exception as e:
-#                 transaction.rollback()
-#                 st.write(f"Error during insertion: {e}")
-#                 logging.error(f"Error inserting into risk_register: {e}")
-#         engine.dispose()
 
 def fetch_all_from_risk_register():
     engine = connect_to_db()
@@ -872,17 +828,23 @@ def main():
             plot_risk_matrix_with_axes_labels(inherent_risk_count_matrix, inherent_risk_matrix, "Inherent Risk Matrix with Counts")
             plot_risk_matrix_with_axes_labels(residual_risk_count_matrix, residual_risk_matrix, "Residual Risk Matrix with Counts")
 
-                                         
         elif tab == 'Delete Risk':
             st.subheader('Delete Risk from Risk Data')
             if not st.session_state['risk_data'].empty:
                 risk_to_delete = st.selectbox('Select a risk to delete', fetch_all_from_risk_data()['risk_description'].tolist())
                 if st.button('Delete Risk'):
+                    # Capture the initial count of rows
+                    initial_count = len(st.session_state['risk_data'])
+                    # Attempt to delete the risk
                     delete_from_risk_data_by_risk_description(risk_to_delete)
+                    # Fetch the updated data
                     st.session_state['risk_data'] = fetch_all_from_risk_data()
-                    st.write("Risk deleted.")
+                    # Check if the row count has decreased, indicating successful deletion
+                    if len(st.session_state['risk_data']) < initial_count:
+                        st.write("Risk deleted.")
             else:
                 st.write("No risks to delete.")
+                              
 
         elif tab == 'Update Risk':
             st.subheader('Update Risk in Risk Data')
@@ -900,27 +862,33 @@ def main():
                 updated_residual_risk_impact = st.selectbox('residual_risk_impact', list(risk_levels.keys()), index=list(risk_levels.keys()).index(selected_risk_row['residual_risk_impact']))
                 updated_by = st.text_input('updated_by', value=selected_risk_row['updated_by'])
                 updated_date_last_updated = st.date_input('date_last_updated', value=selected_risk_row['date_last_updated'])
-                
+
                 if st.button('Update Risk'):
                     updated_risk = {
-                    'risk_type': st.session_state['risk_type'],
-                    'updated_by': updated_by,
-                    'date_last_updated': updated_date_last_updated.strftime('%Y-%m-%d'),
-                    'risk_description': updated_risk_description,
-                    'cause_consequences': updated_cause_consequences,
-                    'risk_owners': updated_risk_owners,
-                    'inherent_risk_probability': updated_inherent_risk_probability,
-                    'inherent_risk_impact': updated_inherent_risk_impact,
-                    'inherent_risk_rating': calculate_risk_rating(updated_inherent_risk_probability, updated_inherent_risk_impact),
-                    'controls': updated_controls,
-                    'control_owners': updated_control_owners,
-                    'residual_risk_probability': updated_residual_risk_probability,
-                    'residual_risk_impact': updated_residual_risk_impact,
-                    'residual_risk_rating': calculate_risk_rating(updated_residual_risk_probability, updated_residual_risk_impact)
+                        'risk_type': st.session_state['risk_type'],
+                        'updated_by': updated_by,
+                        'date_last_updated': updated_date_last_updated.strftime('%Y-%m-%d'),
+                        'risk_description': updated_risk_description,
+                        'cause_consequences': updated_cause_consequences,
+                        'risk_owners': updated_risk_owners,
+                        'inherent_risk_probability': updated_inherent_risk_probability,
+                        'inherent_risk_impact': updated_inherent_risk_impact,
+                        'inherent_risk_rating': calculate_risk_rating(updated_inherent_risk_probability, updated_inherent_risk_impact),
+                        'controls': updated_controls,
+                        'control_owners': updated_control_owners,
+                        'residual_risk_probability': updated_residual_risk_probability,
+                        'residual_risk_impact': updated_residual_risk_impact,
+                        'residual_risk_rating': calculate_risk_rating(updated_residual_risk_probability, updated_residual_risk_impact)
                     }
 
+                    # Check if the risk data was successfully updated
+                    old_data = st.session_state['risk_data'].copy()
                     update_risk_data_by_risk_description(risk_to_update, updated_risk)
-                    st.write("Risk updated.")
+                    # Re-fetch data to check for successful update
+                    st.session_state['risk_data'] = fetch_all_from_risk_data()
+                    # Compare old and new data to verify the update
+                    if not old_data.equals(st.session_state['risk_data']):
+                        st.write("Risk updated.")
             else:
                 st.write("No risks to update.")
 
