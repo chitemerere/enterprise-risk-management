@@ -384,6 +384,56 @@ def logout():
     for key in list(st.session_state.keys()):
         del st.session_state[key]
     st.session_state.logged_in = False
+    
+def change_password(username, current_password, new_password):
+    logging.info(f"Initiating password change for user: {username}")
+    engine = connect_to_db()
+    if engine:
+        try:
+            with engine.begin() as connection:  # Use a transaction
+                # Verify the current password
+                query = text("SELECT password FROM credentials WHERE username = :username")
+                result = connection.execute(query, {"username": username})
+                row = result.fetchone()
+                
+                if row:
+                    stored_password = row[0]
+                    logging.info(f"Stored password hash: {stored_password}")
+
+                    # Check if the current password matches the stored password
+                    if bcrypt.checkpw(current_password.encode('utf-8'), stored_password.encode('utf-8')):
+                        logging.info("Current password verified successfully.")
+
+                        # Hash the new password
+                        new_hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+                        logging.info(f"New hashed password: {new_hashed_password}")
+
+                        # Update with the new password
+                        update_query = text("UPDATE credentials SET password = :new_password WHERE username = :username")
+                        result = connection.execute(update_query, {"new_password": new_hashed_password, "username": username})
+                        if result.rowcount == 1:
+                            logging.info("Password updated in the database.")
+                            return True
+                        else:
+                            logging.error("Password update failed, no rows affected.")
+                            st.sidebar.error("Password update failed.")
+                            return False
+                    else:
+                        logging.warning("Current password verification failed.")
+                        st.sidebar.error("The current password you entered is incorrect.")
+                        return False
+                else:
+                    logging.warning(f"User {username} not found in the database.")
+                    st.sidebar.error("User not found.")
+                    return False
+        except Exception as e:
+            logging.error(f"Error during password change: {e}")
+            st.sidebar.error("An error occurred while changing the password.")
+            return False
+    else:
+        logging.error("Failed to connect to the database.")
+        st.sidebar.error("Could not connect to the database.")
+        return False
 
 def main():
     st.image("logo.png", width=200)
@@ -406,8 +456,21 @@ def main():
             logout()
             st.sidebar.success("Logged out successfully!")
 
+        # Password change form in the sidebar
+        st.sidebar.subheader("Change Password")
+        current_password = st.sidebar.text_input("Current Password", type="password", key="current_password")
+        new_password = st.sidebar.text_input("New Password", type="password", key="new_password")
+        confirm_new_password = st.sidebar.text_input("Confirm New Password", type="password", key="confirm_new_password")
+        if st.sidebar.button("Change Password"):
+            if new_password == confirm_new_password:
+                if change_password(st.session_state.username, current_password, new_password):
+                    st.sidebar.success("Password changed successfully.")
+                else:
+                    st.sidebar.error("Current password is incorrect.")
+            else:
+                st.sidebar.error("New passwords do not match.")
+
     # Additional application logic goes here
-    # For example, displaying content based on user role
     if st.session_state.logged_in:
         st.write(f"Welcome {st.session_state.username}! You are logged in as {st.session_state.user_role}.")
     else:
