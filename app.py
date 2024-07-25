@@ -41,7 +41,7 @@ def connect_to_db():
         st.sidebar.warning(f"Error: {err}")
         logging.error(f"Database connection error: {err}")
         return None
-
+    
 def fetch_risk_register_from_db():
     engine = connect_to_db()
     if engine:
@@ -200,37 +200,32 @@ def insert_risks_into_risk_register(data):
             transaction = connection.begin()
             try:
                 if isinstance(data, pd.DataFrame):
-                    # Convert the DataFrame to a list of dictionaries
                     data_list = data.to_dict(orient='records')
                 else:
                     data_list = [data]
+
+                allowed_columns = ['risk_description', 'risk_type', 'updated_by', 'date_last_updated', 
+                                   'cause_consequences', 'risk_owners', 'inherent_risk_probability', 
+                                   'inherent_risk_impact', 'inherent_risk_rating', 'control_owners', 
+                                   'residual_risk_probability', 'residual_risk_impact', 'residual_risk_rating', 
+                                   'controls']
                 
                 for record in data_list:
-                    # Inspect the data before insertion
-                    logging.info(f"Attempting to insert record: {record}")
-                    
-                    # Ensure we only use columns that exist in the database and are relevant
-                    allowed_columns = ['risk_description', 'risk_type', 'updated_by', 'date_last_updated', 
-                                       'cause_consequences', 'risk_owners', 'inherent_risk_probability', 
-                                       'inherent_risk_impact', 'inherent_risk_rating', 'control_owners', 
-                                       'residual_risk_probability', 'residual_risk_impact', 'residual_risk_rating', 
-                                       'controls']
                     record = {k: v for k, v in record.items() if k in allowed_columns}
                     
                     placeholders = ', '.join([f":{key}" for key in record.keys()])
                     columns = ', '.join(record.keys())
                     query = text(f"INSERT INTO risk_register ({columns}) VALUES ({placeholders})")
+                    
                     logging.info(f"Executing query: {query} with parameters: {record}")
-                    connection.execute(query, **record)
+                    connection.execute(query, record)
                 
                 transaction.commit()
                 logging.info(f"Inserted into risk_register: {data_list}")
             except Exception as e:
                 transaction.rollback()
-                st.write(f"Error during insertion: {e}")
                 logging.error(f"Error inserting into risk_register: {e}")
         engine.dispose()
-
 
 def fetch_all_from_risk_register():
     engine = connect_to_db()
@@ -308,26 +303,44 @@ def register(username, password):
         st.sidebar.warning(f"Error: {err}")
         return False
     
+# Initialize session state variables
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+
+if 'username' not in st.session_state:
+    st.session_state.username = ""
+
+if 'user_role' not in st.session_state:
+    st.session_state.user_role = ""
+    
+# Initialize session state variables
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+
+if 'username' not in st.session_state:
+    st.session_state.username = ""
+
+if 'user_role' not in st.session_state:
+    st.session_state.user_role = ""
+    
 def login(username, password):
+    logging.info(f"Attempting login for username: {username}")
     engine = connect_to_db()
     if engine:
         try:
             with engine.connect() as connection:
-                query = text("SELECT password, expiry_date FROM credentials WHERE username = :username")
+                query = text("SELECT password, expiry_date, role FROM credentials WHERE username = :username")
                 result = connection.execute(query, {"username": username})
                 row = result.fetchone()
 
                 if row:
-                    stored_password, expiry_date = row
-                    logging.info(f"Fetched password and expiry date for {username}")
+                    stored_password, expiry_date, role = row
+                    logging.info(f"Fetched credentials for {username}")
 
-                    # Ensure stored_password is not None and proceed with password check
                     if stored_password:
-                        logging.info(f"Stored password is available for {username}")
-                        # Check if the password matches
                         if bcrypt.checkpw(password.encode('utf-8'), stored_password.encode('utf-8')):
                             logging.info(f"Password matched for {username}")
-                            # Check if the account is expired
+
                             if expiry_date:
                                 try:
                                     expiry_date = datetime.strptime(str(expiry_date), '%Y-%m-%d')
@@ -340,29 +353,32 @@ def login(username, password):
                                     logging.error(f"Invalid expiry date format for {username}: {expiry_date}")
                                     return False
 
-                            # If the password matches and the account is not expired, log in the user
+                            if not role:
+                                st.sidebar.error("No role found for the user. Please contact the administrator.")
+                                logging.error(f"No role found for {username}")
+                                return False
+
+                            # If login is successful
                             st.session_state.logged_in = True
-                            st.session_state.user_role = 'admin'  # Set this based on actual user role from the database
+                            st.session_state.username = username
+                            st.session_state.user_role = role
+                            logging.info(f"User {username} logged in successfully with role {role}.")
                             return True
                         else:
-                            st.sidebar.error("Invalid credentials.")
                             logging.info(f"Invalid credentials for {username}")
                             return False
                     else:
-                        st.sidebar.error("Stored password is missing or invalid.")
                         logging.error(f"Stored password is missing for {username}")
                         return False
                 else:
-                    st.sidebar.error("Username not found.")
                     logging.info(f"Username not found: {username}")
                     return False
         except Exception as e:
             logging.error(f"Login error: {e}")
-            st.sidebar.error("An error occurred during login.")
         finally:
             engine.dispose()
     return False
-   
+
 def logout():
     """Logout the user and clear session state."""
     for key in list(st.session_state.keys()):
@@ -372,26 +388,31 @@ def logout():
 def main():
     st.image("logo.png", width=200)
     st.markdown('### Enterprise Risk Management Application')
-
-    if 'logged_in' not in st.session_state:
-        st.session_state.logged_in = False
-
+    
     if not st.session_state.logged_in:
-        st.sidebar.subheader("Login")
-        username = st.sidebar.text_input("Username")
-        password = st.sidebar.text_input("Password", type="password")
-        if st.sidebar.button("Login"):
+        st.sidebar.header("Login")
+        username = st.sidebar.text_input("Username", key="login_username")
+        password = st.sidebar.text_input("Password", type="password", key="login_password")
+        if st.sidebar.button("Login", key="login_button"):
             if login(username, password):
-                st.session_state.logged_in = True
-                st.session_state.user_role = "user_role"  # Set user role accordingly
-                st.sidebar.success("Logged in successfully!")
+                st.sidebar.success(f"Logged in as: {st.session_state.username}")
+                st.sidebar.info(f"Role: {st.session_state.user_role}")
             else:
-                st.sidebar.error("Invalid credentials")
+                st.sidebar.error("Login failed. Please check your credentials.")
     else:
-        if st.sidebar.button("Logout"):
+        st.sidebar.header(f"Welcome, {st.session_state.username}")
+        st.sidebar.info(f"Role: {st.session_state.user_role}")
+        if st.sidebar.button("Logout", key="logout_button"):
             logout()
             st.sidebar.success("Logged out successfully!")
 
+    # Additional application logic goes here
+    # For example, displaying content based on user role
+    if st.session_state.logged_in:
+        st.write(f"Welcome {st.session_state.username}! You are logged in as {st.session_state.user_role}.")
+    else:
+        st.write("Please log in to access the application.")
+    
     if st.session_state.logged_in and st.session_state.user_role == 'admin':
         st.sidebar.subheader("Register New User")
         new_username = st.sidebar.text_input("New Username", key='reg_username')
