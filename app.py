@@ -281,44 +281,93 @@ def delete_from_risk_register_by_risk_description(risk_description):
             engine.dispose()
     else:
         st.error("You do not have permission to delete risks.")
-
-def login(username, password):
+        
+def register(username, password):
     engine = connect_to_db()
     if engine is None:
+        logging.error("Failed to connect to the database.")
+        return False
+    
+    try:
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        logging.debug(f"Hashed password for {username}: {hashed_password}")
+    except Exception as e:
+        logging.error(f"Password hashing failed for {username}: {e}")
+        st.sidebar.warning(f"Password hashing error: {e}")
         return False
 
     try:
         with engine.connect() as connection:
-            query = text("SELECT password, role FROM credentials WHERE username = :username")
-            result = connection.execute(query, {"username": username})
-            user = result.fetchone()
-
-            if user and bcrypt.checkpw(password.encode('utf-8'), user[0].encode('utf-8')):
-                st.session_state.logged_in = True
-                st.session_state.user_role = user[1]  # Store user role
-                logging.info(f"User {username} logged in with role {user[1]}")
-                return True
-            else:
-                return False
+            query = text("INSERT INTO credentials (username, password) VALUES (:username, :password)")
+            result = connection.execute(query, {"username": username, "password": hashed_password.decode('utf-8')})
+            connection.commit()  # Ensure the transaction is committed
+            logging.info(f"Registered new user {username}, Rows affected: {result.rowcount}")
+        return True
     except Exception as err:
-        st.sidebar.warning(f"Error during login: {err}")
-        logging.error(f"Login error for user {username}: {err}")
+        logging.error(f"Registration error for user {username}: {err}")
+        st.sidebar.warning(f"Error: {err}")
         return False
-
-def register(username, password):
+    
+def login(username, password):
     engine = connect_to_db()
     if engine:
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         try:
             with engine.connect() as connection:
-                query = text("INSERT INTO credentials (username, password) VALUES (:username, :password)")
-                connection.execute(query, {"username": username, "password": hashed_password.decode('utf-8')})
-                logging.info(f"Registered new user {username}")
-            return True
-        except Exception as err:
-            st.sidebar.warning(f"Error: {err}")
-            logging.error(f"Registration error for user {username}: {err}")
-            return False
+                query = text("SELECT password, expiry_date FROM credentials WHERE username = :username")
+                result = connection.execute(query, {"username": username})
+                row = result.fetchone()
+
+                if row:
+                    stored_password, expiry_date = row
+                    logging.info(f"Fetched password and expiry date for {username}")
+
+                    # Ensure stored_password is not None and proceed with password check
+                    if stored_password:
+                        logging.info(f"Stored password is available for {username}")
+                        # Check if the password matches
+                        if bcrypt.checkpw(password.encode('utf-8'), stored_password.encode('utf-8')):
+                            logging.info(f"Password matched for {username}")
+                            # Check if the account is expired
+                            if expiry_date:
+                                try:
+                                    expiry_date = datetime.strptime(str(expiry_date), '%Y-%m-%d')
+                                    if expiry_date < datetime.now():
+                                        st.sidebar.error("Your account has expired. Please contact the administrator.")
+                                        logging.info(f"Account expired for {username}")
+                                        return False
+                                except ValueError:
+                                    st.sidebar.error("Invalid expiry date format. Please contact the administrator.")
+                                    logging.error(f"Invalid expiry date format for {username}: {expiry_date}")
+                                    return False
+
+                            # If the password matches and the account is not expired, log in the user
+                            st.session_state.logged_in = True
+                            st.session_state.user_role = 'admin'  # Set this based on actual user role from the database
+                            return True
+                        else:
+                            st.sidebar.error("Invalid credentials.")
+                            logging.info(f"Invalid credentials for {username}")
+                            return False
+                    else:
+                        st.sidebar.error("Stored password is missing or invalid.")
+                        logging.error(f"Stored password is missing for {username}")
+                        return False
+                else:
+                    st.sidebar.error("Username not found.")
+                    logging.info(f"Username not found: {username}")
+                    return False
+        except Exception as e:
+            logging.error(f"Login error: {e}")
+            st.sidebar.error("An error occurred during login.")
+        finally:
+            engine.dispose()
+    return False
+   
+def logout():
+    """Logout the user and clear session state."""
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+    st.session_state.logged_in = False
 
 def main():
     st.image("logo.png", width=200)
@@ -333,9 +382,15 @@ def main():
         password = st.sidebar.text_input("Password", type="password")
         if st.sidebar.button("Login"):
             if login(username, password):
+                st.session_state.logged_in = True
+                st.session_state.user_role = "user_role"  # Set user role accordingly
                 st.sidebar.success("Logged in successfully!")
             else:
                 st.sidebar.error("Invalid credentials")
+    else:
+        if st.sidebar.button("Logout"):
+            logout()
+            st.sidebar.success("Logged out successfully!")
 
     if st.session_state.logged_in and st.session_state.user_role == 'admin':
         st.sidebar.subheader("Register New User")
@@ -436,7 +491,6 @@ def main():
             ('Main Application', 'Risks Overview', 'Risks Owners & Control Owners', 'Adjusted Risk Matrices', 'Delete Risk', 'Update Risk')
         )
 
-        
         if 'risk_data' not in st.session_state:
             st.session_state['risk_data'] = fetch_risk_register_from_db()
             if st.session_state['risk_data'].empty:
@@ -446,7 +500,6 @@ def main():
                     'controls', 'control_owners', 
                     'residual_risk_probability', 'residual_risk_impact', 'residual_risk_rating'
                 ])
-
 
         if 'risk_register' not in st.session_state:
             st.session_state['risk_register'] = fetch_risk_register_from_db()
@@ -475,8 +528,14 @@ def main():
             if uploaded_file:
                 if st.sidebar.button("Upload"):
                     data = pd.read_csv(uploaded_file)
-
-                    if set(['risk_description','risk_type','updated_by','date_last_updated','cause_consequences','risk_owners','inherent_risk_probability','inherent_risk_impact','inherent_risk_rating','control_owners','residual_risk_probability','residual_risk_impact','residual_risk_rating' ,'controls']).issubset(data.columns):
+                    required_columns = [
+                        'risk_description', 'risk_type', 'updated_by', 'date_last_updated',
+                        'cause_consequences', 'risk_owners', 'inherent_risk_probability', 
+                        'inherent_risk_impact', 'inherent_risk_rating', 'control_owners',
+                        'residual_risk_probability', 'residual_risk_impact', 'residual_risk_rating', 
+                        'controls'
+                    ]
+                    if set(required_columns).issubset(data.columns):
                         insert_uploaded_data_to_db(data)
                         st.sidebar.success("Data uploaded successfully!")
                     else:
@@ -494,7 +553,11 @@ def main():
             )
             st.session_state['risk_appetite'] = selected_appetite
 
-            st.session_state['risk_type'] = st.selectbox('Risk Type', ['Strategic risk', 'Operational risks', 'Organizational risks', 'Reputation risks', 'Market risks', 'Compliance & Regulatory risks', 'Hazard risks','Financial risks' ,'Project risks'])
+            st.session_state['risk_type'] = st.selectbox('Risk Type', [
+                'Strategic risk', 'Operational risks', 'Organizational risks', 
+                'Reputation risks', 'Market risks', 'Compliance & Regulatory risks', 
+                'Hazard risks', 'Financial risks' ,'Project risks'
+            ])
             st.session_state['updated_by'] = st.text_input('Updated By')
             st.session_state['date_last_updated'] = st.date_input('Date Last Updated')
             risk_description = st.text_input('Risk Description', key='risk_description')
@@ -833,19 +896,14 @@ def main():
             if not st.session_state['risk_data'].empty:
                 risk_to_delete = st.selectbox('Select a risk to delete', fetch_all_from_risk_data()['risk_description'].tolist())
                 if st.button('Delete Risk'):
-                    # Capture the initial count of rows
                     initial_count = len(st.session_state['risk_data'])
-                    # Attempt to delete the risk
                     delete_from_risk_data_by_risk_description(risk_to_delete)
-                    # Fetch the updated data
                     st.session_state['risk_data'] = fetch_all_from_risk_data()
-                    # Check if the row count has decreased, indicating successful deletion
                     if len(st.session_state['risk_data']) < initial_count:
                         st.write("Risk deleted.")
             else:
                 st.write("No risks to delete.")
                               
-
         elif tab == 'Update Risk':
             st.subheader('Update Risk in Risk Data')
             if not st.session_state['risk_data'].empty:
@@ -881,12 +939,9 @@ def main():
                         'residual_risk_rating': calculate_risk_rating(updated_residual_risk_probability, updated_residual_risk_impact)
                     }
 
-                    # Check if the risk data was successfully updated
                     old_data = st.session_state['risk_data'].copy()
                     update_risk_data_by_risk_description(risk_to_update, updated_risk)
-                    # Re-fetch data to check for successful update
                     st.session_state['risk_data'] = fetch_all_from_risk_data()
-                    # Compare old and new data to verify the update
                     if not old_data.equals(st.session_state['risk_data']):
                         st.write("Risk updated.")
             else:
@@ -894,4 +949,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+        
 
