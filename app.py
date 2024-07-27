@@ -754,22 +754,36 @@ def main():
                 }
             </style>
             """, unsafe_allow_html=True)
-                        
+
             if 'risk_data' not in st.session_state:
                 st.session_state['risk_data'] = fetch_all_from_risk_data()
-               
+
             st.header('Risks Dashboard')
             st.subheader('Before Risk Appetite')
-            
+
             risk_data = st.session_state['risk_data']
-            
-            risk_rating_counts = risk_data['inherent_risk_rating'].value_counts()
+
+            # Ensure 'date_last_updated' is in datetime format
+            risk_data['date_last_updated'] = pd.to_datetime(risk_data['date_last_updated'])
+
+            # Date filter section
+            min_date = risk_data['date_last_updated'].min()
+            max_date = risk_data['date_last_updated'].max()
+
+            from_date = st.date_input('From', value=min_date.date(), min_value=min_date.date(), max_value=max_date.date())
+            to_date = st.date_input('To', value=max_date.date(), min_value=min_date.date(), max_value=max_date.date())
+
+            # Apply date filter to the data
+            filtered_data = risk_data[(risk_data['date_last_updated'] >= pd.Timestamp(from_date)) &
+                                      (risk_data['date_last_updated'] <= pd.Timestamp(to_date))]
+
+            risk_rating_counts = filtered_data['inherent_risk_rating'].value_counts()
 
             critical_count = risk_rating_counts.get('Critical', 0)
             severe_count = risk_rating_counts.get('Severe', 0)
             moderate_count = risk_rating_counts.get('Moderate', 0)
             sustainable_count = risk_rating_counts.get('Sustainable', 0)
-            
+
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 st.metric("Critical Inherent Risks", critical_count)
@@ -779,16 +793,16 @@ def main():
                 st.metric("Moderate Inherent Risks", moderate_count)
             with col4:
                 st.metric("Sustainable Inherent Risks", sustainable_count)
-                
-                style_metric_cards(border_left_color="#DBF227")
-                
-            residual_risk_rating_counts = risk_data['residual_risk_rating'].value_counts()
+
+            style_metric_cards(border_left_color="#DBF227")
+
+            residual_risk_rating_counts = filtered_data['residual_risk_rating'].value_counts()
 
             residual_critical_count = residual_risk_rating_counts.get('Critical', 0)
             residual_severe_count = residual_risk_rating_counts.get('Severe', 0)
             residual_moderate_count = residual_risk_rating_counts.get('Moderate', 0)
             residual_sustainable_count = residual_risk_rating_counts.get('Sustainable', 0)
-            
+
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 st.metric("Critical Residual Risks", residual_critical_count)
@@ -798,12 +812,12 @@ def main():
                 st.metric("Moderate Residual Risks", residual_moderate_count)
             with col4:
                 st.metric("Sustainable Residual Risks", residual_sustainable_count)
-                
-                style_metric_cards(border_left_color="#DBF227")
-            
-            risk_type_counts = risk_data['risk_type'].value_counts()
 
-            fig=plt.figure(figsize=(10,6))
+            style_metric_cards(border_left_color="#DBF227")
+
+            risk_type_counts = filtered_data['risk_type'].value_counts()
+
+            fig = plt.figure(figsize=(10, 6))
             bars = plt.bar(risk_type_counts.index, risk_type_counts.values, color='skyblue')
             plt.title("Risk Types Count")
             plt.ylabel("Count")
@@ -815,20 +829,21 @@ def main():
 
             plt.tight_layout()
             st.pyplot(fig)
-            
+
             st.subheader('After Risk Appetite')
-            
+
             risk_appetite = st.session_state.get('risk_appetite', [])
-            mask = (~st.session_state['risk_data']['inherent_risk_rating'].isin(risk_appetite)) & (~st.session_state['risk_data']['residual_risk_rating'].isin(risk_appetite))
-            risk_register = st.session_state['risk_data'][mask]
-            
+            mask = (~filtered_data['inherent_risk_rating'].isin(risk_appetite)) & \
+                   (~filtered_data['residual_risk_rating'].isin(risk_appetite))
+            risk_register = filtered_data[mask]
+
             risk_rating_counts = risk_register['inherent_risk_rating'].value_counts()
 
             critical_count = risk_rating_counts.get('Critical', 0)
             severe_count = risk_rating_counts.get('Severe', 0)
             moderate_count = risk_rating_counts.get('Moderate', 0)
             sustainable_count = risk_rating_counts.get('Sustainable', 0)
-            
+
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 st.metric("Critical Inherent Risks", critical_count)
@@ -838,16 +853,16 @@ def main():
                 st.metric("Moderate Inherent Risks", moderate_count)
             with col4:
                 st.metric("Sustainable Inherent Risks", sustainable_count)
-                
-                style_metric_cards(border_left_color="#DBF227")
-                
+
+            style_metric_cards(border_left_color="#DBF227")
+
             residual_risk_rating_counts = risk_register['residual_risk_rating'].value_counts()
 
             residual_critical_count = residual_risk_rating_counts.get('Critical', 0)
             residual_severe_count = residual_risk_rating_counts.get('Severe', 0)
             residual_moderate_count = residual_risk_rating_counts.get('Moderate', 0)
             residual_sustainable_count = residual_risk_rating_counts.get('Sustainable', 0)
-            
+
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 st.metric("Critical Residual Risks", residual_critical_count)
@@ -857,12 +872,12 @@ def main():
                 st.metric("Moderate Residual Risks", residual_moderate_count)
             with col4:
                 st.metric("Sustainable Residual Risks", residual_sustainable_count)
-                
-                style_metric_cards(border_left_color="#DBF227")
-            
+
+            style_metric_cards(border_left_color="#DBF227")
+
             risk_type_counts = risk_register['risk_type'].value_counts()
 
-            fig=plt.figure(figsize=(10,6))
+            fig = plt.figure(figsize=(10, 6))
             bars = plt.bar(risk_type_counts.index, risk_type_counts.values, color='skyblue')
             plt.title("Risk Types Count")
             plt.ylabel("Count")
@@ -874,7 +889,7 @@ def main():
 
             plt.tight_layout()
             st.pyplot(fig)
-        
+       
         elif tab == 'Risks Owners & Control Owners':
             st.markdown("""
             <style>
@@ -956,7 +971,6 @@ def main():
                         ax.set_xlim(0, 5)
                         ax.set_ylim(0, 5)
 
-                        # Debugging: Check what value is being used for color mapping
                         cell_value = risk_matrix[r, c]
                         if cell_value not in color_mapping:
                             st.write(f"Unexpected value '{cell_value}' in risk_matrix at ({r}, {c}). Using default color.")
@@ -973,8 +987,23 @@ def main():
                 plt.tight_layout()
                 st.pyplot(fig)
 
+            # Load or fetch data
             risk_data = st.session_state.get('risk_data', fetch_all_from_risk_data())
-            
+
+            # Ensure 'date_last_updated' is in datetime format
+            risk_data['date_last_updated'] = pd.to_datetime(risk_data['date_last_updated'])
+
+            # Date filter section
+            min_date = risk_data['date_last_updated'].min().date()
+            max_date = risk_data['date_last_updated'].max().date()
+
+            from_date = st.date_input('From', value=min_date, min_value=min_date, max_value=max_date)
+            to_date = st.date_input('To', value=max_date, min_value=min_date, max_value=max_date)
+
+            # Apply date filter to the data
+            filtered_data = risk_data[(risk_data['date_last_updated'] >= pd.Timestamp(from_date)) &
+                                      (risk_data['date_last_updated'] <= pd.Timestamp(to_date))]
+
             st.header('Adjusted Risk Matrices')
             st.subheader('Before Risk Appetite')
 
@@ -991,26 +1020,22 @@ def main():
                 'residual_risk_probability', 'residual_risk_impact'
             ]
 
-            missing_columns = [col for col in required_columns if col not in risk_data.columns]
+            missing_columns = [col for col in required_columns if col not in filtered_data.columns]
             if missing_columns:
                 st.error(f"Missing columns in risk_data: {', '.join(missing_columns)}")
                 return
 
-            risk_data['inherent_risk_probability_num'] = risk_data['inherent_risk_probability'].map(probability_mapping)
-            risk_data['inherent_risk_impact_num'] = risk_data['inherent_risk_impact'].map(probability_mapping)
-            risk_data['residual_risk_probability_num'] = risk_data['residual_risk_probability'].map(probability_mapping)
-            risk_data['residual_risk_impact_num'] = risk_data['residual_risk_impact'].map(probability_mapping)
-            
+            filtered_data['inherent_risk_probability_num'] = filtered_data['inherent_risk_probability'].map(probability_mapping)
+            filtered_data['inherent_risk_impact_num'] = filtered_data['inherent_risk_impact'].map(probability_mapping)
+            filtered_data['residual_risk_probability_num'] = filtered_data['residual_risk_probability'].map(probability_mapping)
+            filtered_data['residual_risk_impact_num'] = filtered_data['residual_risk_impact'].map(probability_mapping)
+
             inherent_risk_matrix = np.empty((5, 5), dtype=object)
             residual_risk_matrix = np.empty((5, 5), dtype=object)
             inherent_risk_count_matrix = np.zeros((5, 5), dtype=int)
             residual_risk_count_matrix = np.zeros((5, 5), dtype=int)
 
-            inherent_risk_counts = risk_data['inherent_risk_rating'].value_counts()
-            residual_risk_counts = risk_data['residual_risk_rating'].value_counts()
-
-            for _, row in risk_data.iterrows():
-                # Ensure the values are mapped correctly and handle unexpected values
+            for _, row in filtered_data.iterrows():
                 prob_num = row.get('inherent_risk_probability_num')
                 impact_num = row.get('inherent_risk_impact_num')
                 inherent_risk_rating = row.get('inherent_risk_rating')
@@ -1024,7 +1049,7 @@ def main():
                 if prob_num and impact_num and residual_risk_rating in color_mapping:
                     residual_risk_matrix[5 - prob_num, impact_num - 1] = residual_risk_rating
                     residual_risk_count_matrix[5 - prob_num, impact_num - 1] += 1
-                
+
             master_risk_matrix = np.array([
                 ["Moderate", "Severe", "Severe", "Critical", "Critical"],
                 ["Moderate", "Moderate", "Severe", "Critical", "Critical"],
@@ -1042,46 +1067,25 @@ def main():
 
             plot_risk_matrix_with_axes_labels(inherent_risk_count_matrix, inherent_risk_matrix, "Inherent Risk Matrix with Counts")
             plot_risk_matrix_with_axes_labels(residual_risk_count_matrix, residual_risk_matrix, "Residual Risk Matrix with Counts")
-            
+
             st.subheader('After Risk Appetite')
-            
-            probability_mapping = {
-                "Very Low": 1,
-                "Low": 2,
-                "Medium": 3,
-                "High": 4,
-                "Very High": 5
-            }
 
-            required_columns = [
-                'inherent_risk_probability', 'inherent_risk_impact',
-                'residual_risk_probability', 'residual_risk_impact'
-            ]
-
-            missing_columns = [col for col in required_columns if col not in risk_data.columns]
-            if missing_columns:
-                st.error(f"Missing columns in risk_data: {', '.join(missing_columns)}")
-                return
-            
             risk_appetite = st.session_state.get('risk_appetite', [])
-            mask = (~st.session_state['risk_data']['inherent_risk_rating'].isin(risk_appetite)) & (~st.session_state['risk_data']['residual_risk_rating'].isin(risk_appetite))
-            risk_register = st.session_state['risk_data'][mask]
+            mask = (~filtered_data['inherent_risk_rating'].isin(risk_appetite)) & \
+                   (~filtered_data['residual_risk_rating'].isin(risk_appetite))
+            risk_register = filtered_data[mask]
 
             risk_register['inherent_risk_probability_num'] = risk_register['inherent_risk_probability'].map(probability_mapping)
             risk_register['inherent_risk_impact_num'] = risk_register['inherent_risk_impact'].map(probability_mapping)
             risk_register['residual_risk_probability_num'] = risk_register['residual_risk_probability'].map(probability_mapping)
             risk_register['residual_risk_impact_num'] = risk_register['residual_risk_impact'].map(probability_mapping)
-            
+
             inherent_risk_matrix = np.empty((5, 5), dtype=object)
             residual_risk_matrix = np.empty((5, 5), dtype=object)
             inherent_risk_count_matrix = np.zeros((5, 5), dtype=int)
             residual_risk_count_matrix = np.zeros((5, 5), dtype=int)
 
-            inherent_risk_counts = risk_register['inherent_risk_rating'].value_counts()
-            residual_risk_counts = risk_register['residual_risk_rating'].value_counts()
-
             for _, row in risk_register.iterrows():
-                # Ensure the values are mapped correctly and handle unexpected values
                 prob_num = row.get('inherent_risk_probability_num')
                 impact_num = row.get('inherent_risk_impact_num')
                 inherent_risk_rating = row.get('inherent_risk_rating')
@@ -1095,14 +1099,6 @@ def main():
                 if prob_num and impact_num and residual_risk_rating in color_mapping:
                     residual_risk_matrix[5 - prob_num, impact_num - 1] = residual_risk_rating
                     residual_risk_count_matrix[5 - prob_num, impact_num - 1] += 1
-                
-            master_risk_matrix = np.array([
-                ["Moderate", "Severe", "Severe", "Critical", "Critical"],
-                ["Moderate", "Moderate", "Severe", "Critical", "Critical"],
-                ["Sustainable", "Moderate", "Severe", "Severe", "Critical"],
-                ["Sustainable", "Sustainable", "Moderate", "Severe", "Critical"],
-                ["Sustainable", "Sustainable", "Moderate", "Moderate", "Severe"]
-            ])
 
             for i in range(5):
                 for j in range(5):
@@ -1113,6 +1109,195 @@ def main():
 
             plot_risk_matrix_with_axes_labels(inherent_risk_count_matrix, inherent_risk_matrix, "Inherent Risk Matrix with Counts")
             plot_risk_matrix_with_axes_labels(residual_risk_count_matrix, residual_risk_matrix, "Residual Risk Matrix with Counts")
+            
+#             color_mapping = {
+#                 "Critical": "red",
+#                 "Severe": "orange",
+#                 "Moderate": "yellow",
+#                 "Sustainable": "green",
+#                 None: "white"
+#             }
+
+#             def plot_risk_matrix_with_axes_labels(matrix, risk_matrix, title, master_risk_matrix=None):
+#                 fig = plt.figure(figsize=(10, 10))
+#                 plt.subplots_adjust(wspace=0, hspace=0)
+#                 plt.xticks([0.5, 1.5, 2.5, 3.5, 4.5], ['Very Low', 'Low', 'Medium', 'High', 'Very High'])
+#                 plt.yticks([0.5, 1.5, 2.5, 3.5, 4.5], ['Very Low', 'Low', 'Medium', 'High', 'Very High'])
+#                 plt.xlim(0, 5)
+#                 plt.ylim(0, 5)
+#                 plt.xlabel('Impact')
+#                 plt.ylabel('Probability')
+#                 plt.title(title)
+
+#                 nrows = 5
+#                 ncols = 5
+#                 axes = [fig.add_subplot(nrows, ncols, r * ncols + c + 1) for r in range(0, nrows) for c in range(0, ncols)]
+
+#                 for r in range(0, nrows):
+#                     for c in range(0, ncols):
+#                         ax = axes[r * ncols + c]
+#                         ax.set_xticks([])
+#                         ax.set_yticks([])
+#                         ax.set_xlim(0, 5)
+#                         ax.set_ylim(0, 5)
+
+#                         # Debugging: Check what value is being used for color mapping
+#                         cell_value = risk_matrix[r, c]
+#                         if cell_value not in color_mapping:
+#                             st.write(f"Unexpected value '{cell_value}' in risk_matrix at ({r}, {c}). Using default color.")
+#                             cell_value = None
+
+#                         ax.set_facecolor(color_mapping[cell_value])
+
+#                         if matrix[r, c] > 0:
+#                             ax.text(2.5, 2.5, str(matrix[r, c]), ha='center', va='center', fontsize=10, weight='bold')
+
+#                 legend_handles = [Line2D([0], [0], color=color_mapping[key], lw=4, label=key) for key in color_mapping if key is not None]
+#                 plt.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1, 0.5))
+
+#                 plt.tight_layout()
+#                 st.pyplot(fig)
+
+#             risk_data = st.session_state.get('risk_data', fetch_all_from_risk_data())
+            
+#             st.header('Adjusted Risk Matrices')
+#             st.subheader('Before Risk Appetite')
+
+#             probability_mapping = {
+#                 "Very Low": 1,
+#                 "Low": 2,
+#                 "Medium": 3,
+#                 "High": 4,
+#                 "Very High": 5
+#             }
+
+#             required_columns = [
+#                 'inherent_risk_probability', 'inherent_risk_impact',
+#                 'residual_risk_probability', 'residual_risk_impact'
+#             ]
+
+#             missing_columns = [col for col in required_columns if col not in risk_data.columns]
+#             if missing_columns:
+#                 st.error(f"Missing columns in risk_data: {', '.join(missing_columns)}")
+#                 return
+
+#             risk_data['inherent_risk_probability_num'] = risk_data['inherent_risk_probability'].map(probability_mapping)
+#             risk_data['inherent_risk_impact_num'] = risk_data['inherent_risk_impact'].map(probability_mapping)
+#             risk_data['residual_risk_probability_num'] = risk_data['residual_risk_probability'].map(probability_mapping)
+#             risk_data['residual_risk_impact_num'] = risk_data['residual_risk_impact'].map(probability_mapping)
+            
+#             inherent_risk_matrix = np.empty((5, 5), dtype=object)
+#             residual_risk_matrix = np.empty((5, 5), dtype=object)
+#             inherent_risk_count_matrix = np.zeros((5, 5), dtype=int)
+#             residual_risk_count_matrix = np.zeros((5, 5), dtype=int)
+
+#             inherent_risk_counts = risk_data['inherent_risk_rating'].value_counts()
+#             residual_risk_counts = risk_data['residual_risk_rating'].value_counts()
+
+#             for _, row in risk_data.iterrows():
+#                 # Ensure the values are mapped correctly and handle unexpected values
+#                 prob_num = row.get('inherent_risk_probability_num')
+#                 impact_num = row.get('inherent_risk_impact_num')
+#                 inherent_risk_rating = row.get('inherent_risk_rating')
+#                 if prob_num and impact_num and inherent_risk_rating in color_mapping:
+#                     inherent_risk_matrix[5 - prob_num, impact_num - 1] = inherent_risk_rating
+#                     inherent_risk_count_matrix[5 - prob_num, impact_num - 1] += 1
+
+#                 prob_num = row.get('residual_risk_probability_num')
+#                 impact_num = row.get('residual_risk_impact_num')
+#                 residual_risk_rating = row.get('residual_risk_rating')
+#                 if prob_num and impact_num and residual_risk_rating in color_mapping:
+#                     residual_risk_matrix[5 - prob_num, impact_num - 1] = residual_risk_rating
+#                     residual_risk_count_matrix[5 - prob_num, impact_num - 1] += 1
+                
+#             master_risk_matrix = np.array([
+#                 ["Moderate", "Severe", "Severe", "Critical", "Critical"],
+#                 ["Moderate", "Moderate", "Severe", "Critical", "Critical"],
+#                 ["Sustainable", "Moderate", "Severe", "Severe", "Critical"],
+#                 ["Sustainable", "Sustainable", "Moderate", "Severe", "Critical"],
+#                 ["Sustainable", "Sustainable", "Moderate", "Moderate", "Severe"]
+#             ])
+
+#             for i in range(5):
+#                 for j in range(5):
+#                     if not inherent_risk_matrix[i, j]:
+#                         inherent_risk_matrix[i, j] = master_risk_matrix[i, j]
+#                     if not residual_risk_matrix[i, j]:
+#                         residual_risk_matrix[i, j] = master_risk_matrix[i, j]
+
+#             plot_risk_matrix_with_axes_labels(inherent_risk_count_matrix, inherent_risk_matrix, "Inherent Risk Matrix with Counts")
+#             plot_risk_matrix_with_axes_labels(residual_risk_count_matrix, residual_risk_matrix, "Residual Risk Matrix with Counts")
+            
+#             st.subheader('After Risk Appetite')
+            
+#             probability_mapping = {
+#                 "Very Low": 1,
+#                 "Low": 2,
+#                 "Medium": 3,
+#                 "High": 4,
+#                 "Very High": 5
+#             }
+
+#             required_columns = [
+#                 'inherent_risk_probability', 'inherent_risk_impact',
+#                 'residual_risk_probability', 'residual_risk_impact'
+#             ]
+
+#             missing_columns = [col for col in required_columns if col not in risk_data.columns]
+#             if missing_columns:
+#                 st.error(f"Missing columns in risk_data: {', '.join(missing_columns)}")
+#                 return
+            
+#             risk_appetite = st.session_state.get('risk_appetite', [])
+#             mask = (~st.session_state['risk_data']['inherent_risk_rating'].isin(risk_appetite)) & (~st.session_state['risk_data']['residual_risk_rating'].isin(risk_appetite))
+#             risk_register = st.session_state['risk_data'][mask]
+
+#             risk_register['inherent_risk_probability_num'] = risk_register['inherent_risk_probability'].map(probability_mapping)
+#             risk_register['inherent_risk_impact_num'] = risk_register['inherent_risk_impact'].map(probability_mapping)
+#             risk_register['residual_risk_probability_num'] = risk_register['residual_risk_probability'].map(probability_mapping)
+#             risk_register['residual_risk_impact_num'] = risk_register['residual_risk_impact'].map(probability_mapping)
+            
+#             inherent_risk_matrix = np.empty((5, 5), dtype=object)
+#             residual_risk_matrix = np.empty((5, 5), dtype=object)
+#             inherent_risk_count_matrix = np.zeros((5, 5), dtype=int)
+#             residual_risk_count_matrix = np.zeros((5, 5), dtype=int)
+
+#             inherent_risk_counts = risk_register['inherent_risk_rating'].value_counts()
+#             residual_risk_counts = risk_register['residual_risk_rating'].value_counts()
+
+#             for _, row in risk_register.iterrows():
+#                 # Ensure the values are mapped correctly and handle unexpected values
+#                 prob_num = row.get('inherent_risk_probability_num')
+#                 impact_num = row.get('inherent_risk_impact_num')
+#                 inherent_risk_rating = row.get('inherent_risk_rating')
+#                 if prob_num and impact_num and inherent_risk_rating in color_mapping:
+#                     inherent_risk_matrix[5 - prob_num, impact_num - 1] = inherent_risk_rating
+#                     inherent_risk_count_matrix[5 - prob_num, impact_num - 1] += 1
+
+#                 prob_num = row.get('residual_risk_probability_num')
+#                 impact_num = row.get('residual_risk_impact_num')
+#                 residual_risk_rating = row.get('residual_risk_rating')
+#                 if prob_num and impact_num and residual_risk_rating in color_mapping:
+#                     residual_risk_matrix[5 - prob_num, impact_num - 1] = residual_risk_rating
+#                     residual_risk_count_matrix[5 - prob_num, impact_num - 1] += 1
+                
+#             master_risk_matrix = np.array([
+#                 ["Moderate", "Severe", "Severe", "Critical", "Critical"],
+#                 ["Moderate", "Moderate", "Severe", "Critical", "Critical"],
+#                 ["Sustainable", "Moderate", "Severe", "Severe", "Critical"],
+#                 ["Sustainable", "Sustainable", "Moderate", "Severe", "Critical"],
+#                 ["Sustainable", "Sustainable", "Moderate", "Moderate", "Severe"]
+#             ])
+
+#             for i in range(5):
+#                 for j in range(5):
+#                     if not inherent_risk_matrix[i, j]:
+#                         inherent_risk_matrix[i, j] = master_risk_matrix[i, j]
+#                     if not residual_risk_matrix[i, j]:
+#                         residual_risk_matrix[i, j] = master_risk_matrix[i, j]
+
+#             plot_risk_matrix_with_axes_labels(inherent_risk_count_matrix, inherent_risk_matrix, "Inherent Risk Matrix with Counts")
+#             plot_risk_matrix_with_axes_labels(residual_risk_count_matrix, residual_risk_matrix, "Residual Risk Matrix with Counts")
 
         elif tab == 'Delete Risk':
             st.subheader('Delete Risk from Risk Data')
