@@ -822,7 +822,7 @@ def main():
             mask = (~st.session_state['risk_data']['inherent_risk_rating'].isin(risk_appetite)) & (~st.session_state['risk_data']['residual_risk_rating'].isin(risk_appetite))
             risk_register = st.session_state['risk_data'][mask]
             
-            risk_rating_counts = risk_data['inherent_risk_rating'].value_counts()
+            risk_rating_counts = risk_register['inherent_risk_rating'].value_counts()
 
             critical_count = risk_rating_counts.get('Critical', 0)
             severe_count = risk_rating_counts.get('Severe', 0)
