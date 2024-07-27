@@ -708,7 +708,7 @@ def main():
                     except Exception as e:
                         st.write(f"Error inserting into risk_register: {e}")
 
-            st.subheader('Risk Data')
+            st.subheader('Risk Filters')
             
             # Assuming fetch_all_from_risk_data() returns a DataFrame with a 'date_last_updated' column
             st.session_state['risk_data'] = fetch_all_from_risk_data()
@@ -728,6 +728,8 @@ def main():
                 (st.session_state['risk_data']['date_last_updated'] >= pd.Timestamp(from_date)) &
                 (st.session_state['risk_data']['date_last_updated'] <= pd.Timestamp(to_date))
             ]
+            
+            st.subheader('Risk Data')
 
             st.write(filtered_data)
 
@@ -777,8 +779,9 @@ def main():
                 st.session_state['risk_data'] = fetch_all_from_risk_data()
 
             st.header('Risks Dashboard')
-            st.subheader('Before Risk Appetite')
-
+            
+            st.subheader('Date Filters')
+           
             risk_data = st.session_state['risk_data']
 
             # Ensure 'date_last_updated' is in datetime format
@@ -794,6 +797,8 @@ def main():
             # Apply date filter to the data
             filtered_data = risk_data[(risk_data['date_last_updated'] >= pd.Timestamp(from_date)) &
                                       (risk_data['date_last_updated'] <= pd.Timestamp(to_date))]
+            
+            st.subheader('Before Risk Appetite')
 
             risk_rating_counts = filtered_data['inherent_risk_rating'].value_counts()
 
@@ -924,6 +929,8 @@ def main():
                 st.session_state['risk_data'] = fetch_all_from_risk_data()
 
             st.subheader('Risks Owners & Control Owners')
+            
+            st.subheader('Date Filters')
 
             risk_data = st.session_state['risk_data']
 
@@ -1020,6 +1027,8 @@ def main():
 
                 plt.tight_layout()
                 st.pyplot(fig)
+                
+            st.subheader('Date Filters')
 
             # Load or fetch data
             risk_data = st.session_state.get('risk_data', fetch_all_from_risk_data())
