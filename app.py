@@ -662,8 +662,8 @@ def main():
             for i, (risk_type, appetite1, appetite2) in enumerate(risk_data):
                 ax.add_patch(plt.Rectangle((0, i), 0.5, 1, facecolor=color_map[appetite1], edgecolor='black'))
                 ax.add_patch(plt.Rectangle((0.5, i), 0.5, 1, facecolor=color_map[appetite2], edgecolor='black'))
-                ax.text(0.25, i + 0.5, appetite1, ha='center', va='center', fontsize=14)
-                ax.text(0.75, i + 0.5, appetite2, ha='center', va='center', fontsize=14)
+                ax.text(0.25, i + 0.5, appetite1, ha='center', va='center', fontsize=16)
+                ax.text(0.75, i + 0.5, appetite2, ha='center', va='center', fontsize=16)
 
             # Set y-axis ticks and labels
             ax.set_yticks(np.arange(len(risk_data)) + 0.5)
