@@ -18,6 +18,7 @@ from matplotlib.lines import Line2D
 import pymysql
 from sqlalchemy import create_engine, text
 import logging
+import io
 
 # Configure logging
 logging.basicConfig(filename='application.log', level=logging.INFO)
@@ -41,7 +42,7 @@ def connect_to_db():
         st.sidebar.warning(f"Error: {err}")
         logging.error(f"Database connection error: {err}")
         return None
-    
+  
 def fetch_risk_register_from_db():
     engine = connect_to_db()
     if engine:
@@ -437,7 +438,7 @@ def change_password(username, current_password, new_password):
 
 def main():
     st.image("logo.png", width=200)
-    st.markdown('### Enterprise Risk Management Application')
+    st.markdown('### Enterprise Risk Assessment Application')
     
     if not st.session_state.logged_in:
         st.sidebar.header("Login")
@@ -490,82 +491,74 @@ def main():
 
     if st.session_state.logged_in:
         # Main application content goes here
+        # Main application content goes here
         def plot_risk_matrix():
-            fig = plt.figure()
+            fig = plt.figure(figsize=(10, 10))
             plt.subplots_adjust(wspace=0, hspace=0)
-            plt.xticks([0.5, 1.5, 2.5, 3.5, 4.5], ['Very Low', 'Low', 'Medium', 'High', 'Very High'])
-            plt.yticks([0.5, 1.5, 2.5, 3.5, 4.5], ['Very Low', 'Low', 'Medium', 'High', 'Very High'])
+
+            # Setting x-ticks with corresponding percentages
+            plt.xticks([0.5, 1.5, 2.5, 3.5, 4.5], 
+                       ['Very Low\n(0%-10%)', 'Low\n(11%-25%)', 'Medium\n(26%-50%)', 'High\n(51%-90%)', 'Very High\n(91%-100%)'])
+            plt.yticks([0.5, 1.5, 2.5, 3.5, 4.5], 
+                       ['Very Low', 'Low', 'Medium', 'High', 'Very High'])
+
             plt.xlim(0, 5)
             plt.ylim(0, 5)
-            plt.xlabel('Impact')
-            plt.ylabel('Probability')
+            plt.xlabel('Probability', fontsize=18)
+            plt.ylabel('Impact', fontsize=18)
 
             nrows = 5
             ncols = 5
-            axes = [fig.add_subplot(nrows, ncols, r * ncols + c + 1) for r in range(0, nrows) for c in range(0, ncols)]
+            axes = [fig.add_subplot(nrows, ncols, r * ncols + c + 1) for r in range(nrows) for c in range(ncols)]
 
             for ax in axes:
                 ax.set_xticks([])
                 ax.set_yticks([])
-                ax.set_xlim(0, 5)
-                ax.set_ylim(0, 5)
+                ax.set_xlim(0, 1)
+                ax.set_ylim(0, 1)
 
-            green = [10, 15, 16, 20, 21]
-            yellow = [0, 5, 6, 11, 17, 22, 23]
-            orange = [1, 2, 7, 12, 13, 18, 24]
+            # Assigning colors to the matrix cells
+            green = [10, 15, 16, 20, 21, 22, 5]
+            yellow = [0, 6, 17, 23, 11, 12]
+            orange = [1, 2, 7, 13, 18, 24]
             red = [3, 4, 8, 9, 14, 19]
 
-            for _ in green:
-                axes[_].set_facecolor('green')
-            for _ in yellow:
-                axes[_].set_facecolor('yellow')
-            for _ in orange:
-                axes[_].set_facecolor('orange')
-            for _ in red:
-                axes[_].set_facecolor('red')
+            for index in green:
+                axes[index].set_facecolor('green')
+            for index in yellow:
+                axes[index].set_facecolor('yellow')
+            for index in orange:
+                axes[index].set_facecolor('orange')
+            for index in red:
+                axes[index].set_facecolor('red')
 
-            axes[10].text(0.1, 0.8, 'Sustainable')
-            axes[15].text(0.1, 0.8, 'Sustainable')
-            axes[20].text(0.1, 0.8, 'Sustainable')
-            axes[16].text(0.1, 0.8, 'Sustainable')
-            axes[21].text(0.1, 0.8, 'Sustainable')
+            # Adding text labels to the matrix cells
+            labels = {
+                'Sustainable': green,
+                'Moderate': yellow,
+                'Severe': orange,
+                'Critical': red
+            }
 
-            axes[0].text(0.1, 0.8, 'Moderate')
-            axes[5].text(0.1, 0.8, 'Moderate')
-            axes[6].text(0.1, 0.8, 'Moderate')
-            axes[11].text(0.1, 0.8, 'Moderate')
-            axes[17].text(0.1, 0.8, 'Moderate')
-            axes[22].text(0.1, 0.8, 'Moderate')
-            axes[23].text(0.1, 0.8, 'Moderate')
+            for label, positions in labels.items():
+                for pos in positions:
+                    axes[pos].text(0.5, 0.5, label, ha='center', va='center', fontsize=14)
 
-            axes[1].text(0.1, 0.8, 'Severe')
-            axes[2].text(0.1, 0.8, 'Severe')
-            axes[7].text(0.1, 0.8, 'Severe')
-            axes[12].text(0.1, 0.8, 'Severe')
-            axes[13].text(0.1, 0.8, 'Severe')
-            axes[18].text(0.1, 0.8, 'Severe')
-            axes[24].text(0.1, 0.8, 'Severe')
+            return fig  # Return the figure object
 
-            axes[3].text(0.1, 0.8, 'Critical')
-            axes[8].text(0.1, 0.8, 'Critical')
-            axes[4].text(0.1, 0.8, 'Critical')
-            axes[9].text(0.1, 0.8, 'Critical')
-            axes[14].text(0.1, 0.8, 'Critical')
-            axes[19].text(0.1, 0.8, 'Critical')
-
-            st.pyplot(fig)
-
+       
         risk_levels = {
             'Very Low': 1, 'Low': 2, 'Medium': 3, 'High': 4, 'Very High': 5
         }
-
+        
         risk_rating_dict = {
-            (1, 1): 'Sustainable', (1, 2): 'Sustainable', (1, 3): 'Moderate', (1, 4): 'Severe', (1, 5): 'Severe',
-            (2, 1): 'Sustainable', (2, 2): 'Moderate', (2, 3): 'Severe', (2, 4): 'Severe', (2, 5): 'Critical',
-            (3, 1): 'Moderate', (3, 2): 'Severe', (3, 3): 'Severe', (3, 4): 'Critical', (3, 5): 'Critical',
-            (4, 1): 'Severe', (4, 2): 'Severe', (4, 3): 'Critical', (4, 4): 'Critical', (4, 5): 'Critical',
+            (1, 1): 'Sustainable', (1, 2): 'Sustainable', (1, 3): 'Sustainable', (1, 4): 'Sustainable', (1, 5): 'Moderate',
+            (2, 1): 'Sustainable', (2, 2): 'Sustainable', (2, 3): 'Moderate', (2, 4): 'Moderate', (2, 5): 'Severe',
+            (3, 1): 'Sustainable', (3, 2): 'Moderate', (3, 3): 'Moderate', (3, 4): 'Severe', (3, 5): 'Severe',
+            (4, 1): 'Moderate', (4, 2): 'Severe', (4, 3): 'Severe', (4, 4): 'Critical', (4, 5): 'Critical',
             (5, 1): 'Severe', (5, 2): 'Critical', (5, 3): 'Critical', (5, 4): 'Critical', (5, 5): 'Critical'
         }
+
         
         def calculate_risk_rating(probability, impact):
             risk_level_num = risk_levels.get(probability, None), risk_levels.get(impact, None)
@@ -580,11 +573,11 @@ def main():
 
         tab = st.sidebar.selectbox(
             'Choose a function',
-            ('Main Application', 'Risks Overview', 'Risks Owners & Control Owners', 'Adjusted Risk Matrices', 'Delete Risk', 'Update Risk')
+            ('Risk Matrix', 'Main Application', 'Risks Overview', 'Risks Owners & Control Owners', 'Adjusted Risk Matrices', 'Delete Risk', 'Update Risk')
         )
 
         if 'risk_data' not in st.session_state:
-#             st.session_state['risk_data'] = fetch_risk_register_from_db()
+
             st.session_state['risk_data'] = fetch_all_from_risk_data()
             if st.session_state['risk_data'].empty:
                 st.session_state['risk_data'] = pd.DataFrame(columns=[
@@ -597,9 +590,6 @@ def main():
         if 'risk_register' not in st.session_state:
             st.session_state['risk_register'] = fetch_risk_register_from_db()
 
-        if 'risk_appetite' not in st.session_state:
-            st.session_state['risk_appetite'] = ['Critical', 'Severe', 'Moderate', 'Sustainable']
-
         if 'risk_type' not in st.session_state:
             st.session_state['risk_type'] = ''
 
@@ -609,13 +599,123 @@ def main():
         if 'date_last_updated' not in st.session_state:
             st.session_state['date_last_updated'] = pd.to_datetime('today')
 
-        if tab == 'Main Application':
+        if tab == 'Risk Matrix':
             if 'risk_data' not in st.session_state:
                 st.session_state['risk_data'] = fetch_all_from_risk_data()
 
             st.subheader('Master Risk Matrix')
-            plot_risk_matrix()
+
+            # Call the function to create the figure
+            fig = plot_risk_matrix()
+
+            if fig:
+                # Display the figure in the Streamlit app
+                st.pyplot(fig)
+
+                # Get the current datetime and format it
+                current_datetime = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+                # Construct the file name with the current datetime
+                file_name = f"risk_matrix_{current_datetime}.png"
+
+                # Save the figure to a BytesIO object
+                buf = io.BytesIO()
+                fig.savefig(buf, format='png')
+                buf.seek(0)
+
+                # Download button
+                st.download_button(
+                    label="Download Risk Matrix as PNG",
+                    data=buf,
+                    file_name=file_name,
+                    mime="image/png"
+                )
+            else:
+                st.error("Error in creating the risk matrix plot.")
+                
+            st.subheader('Risk Appetite Matrix')
             
+            # Define risk types and their corresponding appetite levels
+            risk_data = [
+                ("Strategic", "Severe", "Critical"),
+                ("Operational", "Sustainable", "Moderate"),
+                ("Organizational", "Sustainable", "Moderate"),
+                ("Project", "Sustainable", "Moderate"),
+                ("Market", "Sustainable", "Moderate"),
+                ("Compliance & Regulatory", "Sustainable", "Moderate"),
+                ("Financial", "Moderate", "Moderate"),
+                ("Reputational", "Sustainable", "Moderate")
+            ]
+
+            # Define colors for risk levels
+            color_map = {
+                'Severe': 'orange',
+                'Critical': 'red',
+                'Sustainable': 'green',
+                'Moderate': 'yellow'
+            }
+            
+            # Create the plot
+            fig, ax = plt.subplots(figsize=(12, 8))
+
+            # Plot rectangles for each risk type
+            for i, (risk_type, appetite1, appetite2) in enumerate(risk_data):
+                ax.add_patch(plt.Rectangle((0, i), 0.5, 1, facecolor=color_map[appetite1], edgecolor='black'))
+                ax.add_patch(plt.Rectangle((0.5, i), 0.5, 1, facecolor=color_map[appetite2], edgecolor='black'))
+                ax.text(0.25, i + 0.5, appetite1, ha='center', va='center', fontsize=14)
+                ax.text(0.75, i + 0.5, appetite2, ha='center', va='center', fontsize=14)
+
+            # Set y-axis ticks and labels
+            ax.set_yticks(np.arange(len(risk_data)) + 0.5)
+            ax.set_yticklabels([risk[0] for risk in risk_data], va='center', ha='right', rotation=0, fontsize=18)
+            ax.tick_params(axis='y', which='major', pad=10)  # Add padding to y-axis labels
+
+            # Remove x-axis ticks
+            ax.set_xticks([])
+
+            # Set title
+            ax.set_title('Risk Appetite Matrix', pad=20, fontsize=24)
+
+            # Remove axes
+            ax.spines[:].set_visible(False)
+
+            # Set limits to show full rectangles
+            ax.set_xlim(0, 1)
+            ax.set_ylim(0, len(risk_data))
+
+            # Adjust layout and display
+            plt.tight_layout()
+            plt.ylabel('Risks', fontsize=18)
+           
+            if fig:
+                # Display the figure in the Streamlit app
+                st.pyplot(fig)
+
+                # Get the current datetime and format it
+                current_datetime = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+                # Construct the file name with the current datetime
+                file_name = f"risk_appetite_matrix_{current_datetime}.png"
+
+                # Save the figure to a BytesIO object
+                buf = io.BytesIO()
+                fig.savefig(buf, format='png')
+                buf.seek(0)
+
+                # Download button
+                st.download_button(
+                    label="Download Risk Appetite Matrix as PNG",
+                    data=buf,
+                    file_name=file_name,
+                    mime="image/png"
+                )
+            else:
+                st.error("Error in creating the risk appetite matrix plot.")
+        
+        elif tab == 'Main Application':
+            if 'risk_data' not in st.session_state:
+                st.session_state['risk_data'] = fetch_all_from_risk_data() 
+                
             st.sidebar.subheader('Upload Risk Data')
             uploaded_file = st.sidebar.file_uploader("Choose a CSV file", type="csv")
             if uploaded_file:
@@ -635,22 +735,13 @@ def main():
                         st.sidebar.error("The uploaded file does not have the required columns")
             
             st.subheader('Enter Risk Details')
-
-            if 'risk_appetite' not in st.session_state:
-                st.session_state['risk_appetite'] = ['Critical', 'Severe', 'Moderate', 'Sustainable']
-
-            selected_appetite = st.multiselect(
-                'Risk Appetite', 
-                ['Critical', 'Severe', 'Moderate', 'Sustainable'], 
-                default=st.session_state['risk_appetite']
-            )
-            st.session_state['risk_appetite'] = selected_appetite
-
-            st.session_state['risk_type'] = st.selectbox('Risk Type', [
+          
+            st.session_state['risk_type'] = st.selectbox('Risk Type', sorted([
                 'Strategic risk', 'Operational risks', 'Organizational risks', 
                 'Reputation risks', 'Market risks', 'Compliance & Regulatory risks', 
-                'Hazard risks', 'Financial risks' ,'Project risks'
-            ])
+                'Hazard risks', 'Financial risks', 'Project risks'
+            ]))
+
             st.session_state['updated_by'] = st.text_input('Updated By')
             st.session_state['date_last_updated'] = st.date_input('Date Last Updated')
             risk_description = st.text_input('Risk Description', key='risk_description')
@@ -662,6 +753,12 @@ def main():
             control_owners = st.text_input('Control Owner(s)', key='control_owners')
             residual_risk_probability = st.selectbox('Residual Risk Probability', list(risk_levels.keys()), key='residual_risk_probability')
             residual_risk_impact = st.selectbox('Residual Risk Impact', list(risk_levels.keys()), key='residual_risk_impact')
+
+            # New field for Subsidiary
+            st.session_state['subsidiary'] = st.selectbox('Subsidiary', sorted([
+                'Varichem Pharmaceuticals', 'Greenwood Pharmacy', 'Greenwood Wholesalers',
+                'Prochem', 'Kasuru Investments', 'Varifreight', 'Variplastics'
+            ]))
 
             if st.button('Enter Risk'):
                 inherent_risk_rating = calculate_risk_rating(inherent_risk_probability, inherent_risk_impact)
@@ -681,9 +778,11 @@ def main():
                     'control_owners': control_owners,
                     'residual_risk_probability': residual_risk_probability,
                     'residual_risk_impact': residual_risk_impact,
-                    'residual_risk_rating': residual_risk_rating
+                    'residual_risk_rating': residual_risk_rating,
+                    'subsidiary': st.session_state['subsidiary']  # Include the new field in the risk entry
                 }
-                
+
+                 
                 try:
                     insert_into_risk_data(new_risk)
                     st.write("New risk data successfully entered")
@@ -710,46 +809,141 @@ def main():
 
             st.subheader('Risk Filters')
             
-            # Assuming fetch_all_from_risk_data() returns a DataFrame with a 'date_last_updated' column
-            st.session_state['risk_data'] = fetch_all_from_risk_data()
+            # Load or fetch data
+            risk_data = st.session_state.get('risk_data', fetch_all_from_risk_data())
 
-            # Ensure 'date_last_updated' is in datetime format
-            st.session_state['risk_data']['date_last_updated'] = pd.to_datetime(st.session_state['risk_data']['date_last_updated'])
+            # Initialize filtered_data as an empty DataFrame
+            filtered_data = pd.DataFrame()
 
-            # Date filter section
-            min_date = st.session_state['risk_data']['date_last_updated'].min().date()
-            max_date = st.session_state['risk_data']['date_last_updated'].max().date()
+            # Define colors for each risk rating
+            colors = {
+                'Sustainable': 'background-color: green',
+                'Moderate': 'background-color: yellow',
+                'Severe': 'background-color: orange',
+                'Critical': 'background-color: red'
+            }
 
-            from_date = st.date_input('From', value=min_date, min_value=min_date, max_value=max_date)
-            to_date = st.date_input('To', value=max_date, min_value=min_date, max_value=max_date)
+            # Function to apply styles
+            def highlight_risk(rating):
+                return colors.get(rating, '')
 
-            # Apply date filter to the data
-            filtered_data = st.session_state['risk_data'][
-                (st.session_state['risk_data']['date_last_updated'] >= pd.Timestamp(from_date)) &
-                (st.session_state['risk_data']['date_last_updated'] <= pd.Timestamp(to_date))
+            # Check if the DataFrame is not empty and contains the 'date_last_updated' column
+            if not risk_data.empty and 'date_last_updated' in risk_data.columns:
+                # Ensure 'date_last_updated' is in datetime format, coerce errors to NaT
+                risk_data['date_last_updated'] = pd.to_datetime(risk_data['date_last_updated'], errors='coerce')
+
+                # Date filter section: ensure min_date and max_date are valid
+                min_date = risk_data['date_last_updated'].min()
+                max_date = risk_data['date_last_updated'].max()
+
+                # Handle cases where min_date or max_date might be NaT
+                if pd.isnull(min_date):
+                    min_date = datetime.today().date()  # Set to today's date if NaT
+                else:
+                    min_date = min_date.date()  # Convert to datetime.date
+
+                if pd.isnull(max_date):
+                    max_date = datetime.today().date()  # Set to today's date if NaT
+                else:
+                    max_date = max_date.date()  # Convert to datetime.date
+
+                # Use the dates in the Streamlit date input, ensuring they are valid
+                from_date = st.date_input('From', value=min_date, min_value=min_date, max_value=max_date)
+                to_date = st.date_input('To', value=max_date, min_value=min_date, max_value=max_date)
+
+                # Apply date filter to the data, ensuring proper conversion to Timestamp
+                filtered_data = risk_data[(risk_data['date_last_updated'] >= pd.Timestamp(from_date)) &
+                                          (risk_data['date_last_updated'] <= pd.Timestamp(to_date))]
+            else:
+                st.warning("The data is empty or missing the 'date_last_updated' column.")
+
+            # Define subsidiaries and add 'All' option, then sort alphabetically
+            subsidiaries = [
+                'All',
+                'Varichem Pharmaceuticals',
+                'Greenwood Pharmacy',
+                'Greenwood Wholesalers',
+                'Prochem',
+                'Kasuru Investments',
+                'Varifreight',
+                'Variplastics'
             ]
-            
+            subsidiaries.sort()
+
+            # Add a selectbox for subsidiary filtering
+            selected_subsidiary = st.selectbox('Select Subsidiary', subsidiaries)
+
+            # Apply subsidiary filter if not 'All'
+            if selected_subsidiary != 'All':
+                filtered_data = filtered_data[(filtered_data['Subsidiary'] == selected_subsidiary) | (filtered_data['Subsidiary'].isna())]
+
             st.subheader('Risk Data')
 
-            st.write(filtered_data)
+            # Display the filtered data or a message if it's empty
+            if filtered_data.empty:
+                st.info("No data available for the selected date range and subsidiary.")
+            else:
+                # Apply the style to both columns
+                styled_risk_data = filtered_data.style.applymap(highlight_risk, subset=['inherent_risk_rating', 'residual_risk_rating'])
 
-            if not filtered_data.empty:
+                # Display the styled dataframe in Streamlit
+                st.dataframe(styled_risk_data)
+
+                # Prepare data for download (unstyled data)
                 csv = filtered_data.to_csv(index=False)
                 current_datetime = datetime.now().strftime('%Y%m%d%H%M%S')
+
+                # Provide a download button for the CSV file
                 st.download_button(
                     label="Download Risk Data",
                     data=csv,
                     file_name=f"risk_data_{current_datetime}.csv",
                     mime="text/csv",
                 )
-            else:
-                st.write("No risk data available to download.")
-            
+
             st.subheader('Risk Register')
-            risk_appetite = st.session_state.get('risk_appetite', [])
-            mask = (~st.session_state['risk_data']['inherent_risk_rating'].isin(risk_appetite)) & (~st.session_state['risk_data']['residual_risk_rating'].isin(risk_appetite))
-            risk_register = st.session_state['risk_data'][mask]
-            st.write(risk_register)
+            
+            # Define the risk appetite based on risk type
+            def get_risk_appetite(risk_type):
+                risk_appetite_map = {
+                    'Strategic risks': ['Critical', 'Severe'],
+                    'Operational risks': ['Sustainable', 'Moderate'],
+                    'Organizational risks': ['Sustainable', 'Moderate'],
+                    'Compliance & Regulatory risks': ['Sustainable', 'Moderate'],
+                    'Project risks': ['Sustainable', 'Moderate'],
+                    'Market risks': ['Sustainable', 'Moderate'],
+                    'Financial risks': ['Moderate', 'Moderate'],
+                    'Reputational risks': ['Sustainable', 'Moderate']
+                }
+                return risk_appetite_map.get(risk_type, [])
+
+            # Check for required columns before applying further filtering
+            if 'inherent_risk_rating' in filtered_data.columns and 'residual_risk_rating' in filtered_data.columns and 'risk_type' in filtered_data.columns:
+                filtered_data['risk_appetite'] = filtered_data['risk_type'].apply(get_risk_appetite)
+
+                def residual_exceeds_appetite(row):
+                    # Define a mapping of risk levels for comparison purposes
+                    risk_levels = ['Low', 'Moderate', 'Sustainable', 'Severe', 'Critical']
+
+                    # Check if risk appetite is empty
+                    if not row['risk_appetite']:
+                        return False  # or True if you want to keep risks with no defined appetite
+
+                    # Find the maximum level in the appetite for comparison
+                    max_appetite_level = max(row['risk_appetite'], key=lambda level: risk_levels.index(level))
+
+                    # Check if residual risk rating exceeds the maximum appetite level
+                    return risk_levels.index(row['residual_risk_rating']) > risk_levels.index(max_appetite_level)
+
+                risk_register = filtered_data[filtered_data.apply(residual_exceeds_appetite, axis=1)]
+            else:
+                st.warning("The data is missing required columns for filtering.")
+
+            # Apply the style to both columns
+            styled_risk_data = risk_register.style.applymap(highlight_risk, subset=['inherent_risk_rating', 'residual_risk_rating'])
+
+            # Display the styled dataframe in Streamlit
+            st.dataframe(styled_risk_data)
 
             if not risk_register.empty:
                 csv_register = risk_register.to_csv(index=False)
@@ -762,7 +956,8 @@ def main():
                 )
             else:
                 st.write("No risk register data available to download.")
-                
+            
+               
         elif tab == 'Risks Overview':
             st.markdown("""
             <style>
@@ -777,142 +972,231 @@ def main():
 
             if 'risk_data' not in st.session_state:
                 st.session_state['risk_data'] = fetch_all_from_risk_data()
-
+                
+            # Streamlit layout
             st.header('Risks Dashboard')
+            st.subheader('Risk Filters')
             
-            st.subheader('Date Filters')
-           
-            risk_data = st.session_state['risk_data']
+            # Load data from session state
+            risk_data = st.session_state.get('risk_data', fetch_all_from_risk_data())
 
-            # Ensure 'date_last_updated' is in datetime format
-            risk_data['date_last_updated'] = pd.to_datetime(risk_data['date_last_updated'])
+            # Initialize filtered_data as an empty DataFrame
+            filtered_data = pd.DataFrame()
 
-            # Date filter section
-            min_date = risk_data['date_last_updated'].min()
-            max_date = risk_data['date_last_updated'].max()
+            # Check if the DataFrame is not empty and contains the 'date_last_updated' column
+            if not risk_data.empty and 'date_last_updated' in risk_data.columns:
+                # Ensure 'date_last_updated' is in datetime format, coerce errors to NaT
+                risk_data['date_last_updated'] = pd.to_datetime(risk_data['date_last_updated'], errors='coerce')
 
-            from_date = st.date_input('From', value=min_date.date(), min_value=min_date.date(), max_value=max_date.date())
-            to_date = st.date_input('To', value=max_date.date(), min_value=min_date.date(), max_value=max_date.date())
+                # Date filter section: ensure min_date and max_date are valid
+                min_date = risk_data['date_last_updated'].min()
+                max_date = risk_data['date_last_updated'].max()
 
-            # Apply date filter to the data
-            filtered_data = risk_data[(risk_data['date_last_updated'] >= pd.Timestamp(from_date)) &
-                                      (risk_data['date_last_updated'] <= pd.Timestamp(to_date))]
-            
-            st.subheader('Before Risk Appetite')
+                # Handle cases where min_date or max_date might be NaT
+                if pd.isnull(min_date):
+                    min_date = datetime.today().date()
+                else:
+                    min_date = min_date.date()
 
-            risk_rating_counts = filtered_data['inherent_risk_rating'].value_counts()
+                if pd.isnull(max_date):
+                    max_date = datetime.today().date()
+                else:
+                    max_date = max_date.date()
 
-            critical_count = risk_rating_counts.get('Critical', 0)
-            severe_count = risk_rating_counts.get('Severe', 0)
-            moderate_count = risk_rating_counts.get('Moderate', 0)
-            sustainable_count = risk_rating_counts.get('Sustainable', 0)
+                # Use the dates in the Streamlit date input
+                from_date = st.date_input('From', value=min_date, min_value=min_date, max_value=max_date)
+                to_date = st.date_input('To', value=max_date, min_value=min_date, max_value=max_date)
 
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Critical Inherent Risks", critical_count)
-            with col2:
-                st.metric("Severe Inherent Risks", severe_count)
-            with col3:
-                st.metric("Moderate Inherent Risks", moderate_count)
-            with col4:
-                st.metric("Sustainable Inherent Risks", sustainable_count)
+                # Apply date filter to the data
+                filtered_data = risk_data[(risk_data['date_last_updated'] >= pd.Timestamp(from_date)) &
+                                          (risk_data['date_last_updated'] <= pd.Timestamp(to_date))]
+            else:
+                st.warning("The data is empty or missing the 'date_last_updated' column.")
 
-            style_metric_cards(border_left_color="#DBF227")
+            # Define subsidiaries and add 'All' option, then sort alphabetically
+            subsidiaries = [
+                'All',
+                'Varichem Pharmaceuticals',
+                'Greenwood Pharmacy',
+                'Greenwood Wholesalers',
+                'Prochem',
+                'Kasuru Investments',
+                'Varifreight',
+                'Variplastics'
+            ]
+            subsidiaries.sort()
 
-            residual_risk_rating_counts = filtered_data['residual_risk_rating'].value_counts()
+            # Add a selectbox for subsidiary filtering
+            selected_subsidiary = st.selectbox('Select Subsidiary', subsidiaries)
 
-            residual_critical_count = residual_risk_rating_counts.get('Critical', 0)
-            residual_severe_count = residual_risk_rating_counts.get('Severe', 0)
-            residual_moderate_count = residual_risk_rating_counts.get('Moderate', 0)
-            residual_sustainable_count = residual_risk_rating_counts.get('Sustainable', 0)
+            # Apply subsidiary filter if not 'All'
+            if selected_subsidiary != 'All':
+                filtered_data = filtered_data[(filtered_data['Subsidiary'] == selected_subsidiary) | (filtered_data['Subsidiary'].isna())]
 
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Critical Residual Risks", residual_critical_count)
-            with col2:
-                st.metric("Severe Residual Risks", residual_severe_count)
-            with col3:
-                st.metric("Moderate Residual Risks", residual_moderate_count)
-            with col4:
-                st.metric("Sustainable Residual Risks", residual_sustainable_count)
+            st.subheader('Risk Data')
 
-            style_metric_cards(border_left_color="#DBF227")
+            # Display the filtered data or a message if it's empty
+            if filtered_data.empty:
+                st.info("No data available for the selected date range and subsidiary.")
+            else:
+                # Before Risk Appetite Analysis
+                st.subheader('Before Risk Appetite')
 
-            risk_type_counts = filtered_data['risk_type'].value_counts()
+                if 'inherent_risk_rating' in filtered_data.columns:
+                    risk_rating_counts = filtered_data['inherent_risk_rating'].value_counts()
 
-            fig = plt.figure(figsize=(10, 6))
-            bars = plt.bar(risk_type_counts.index, risk_type_counts.values, color='skyblue')
-            plt.title("Risk Types Count")
-            plt.ylabel("Count")
-            plt.xticks(rotation=45)
+                    critical_count = risk_rating_counts.get('Critical', 0)
+                    severe_count = risk_rating_counts.get('Severe', 0)
+                    moderate_count = risk_rating_counts.get('Moderate', 0)
+                    sustainable_count = risk_rating_counts.get('Sustainable', 0)
 
-            for bar in bars:
-                yval = bar.get_height()
-                plt.text(bar.get_x() + bar.get_width()/2, yval - 0.5, yval, ha='center', va='bottom', color='black')
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("Critical Inherent Risks", critical_count)
+                    with col2:
+                        st.metric("Severe Inherent Risks", severe_count)
+                    with col3:
+                        st.metric("Moderate Inherent Risks", moderate_count)
+                    with col4:
+                        st.metric("Sustainable Inherent Risks", sustainable_count)
+                else:
+                    st.warning("The column 'inherent_risk_rating' is missing from the data.")
 
-            plt.tight_layout()
-            st.pyplot(fig)
+                if 'residual_risk_rating' in filtered_data.columns:
+                    residual_risk_rating_counts = filtered_data['residual_risk_rating'].value_counts()
 
-            st.subheader('After Risk Appetite')
+                    residual_critical_count = residual_risk_rating_counts.get('Critical', 0)
+                    residual_severe_count = residual_risk_rating_counts.get('Severe', 0)
+                    residual_moderate_count = residual_risk_rating_counts.get('Moderate', 0)
+                    residual_sustainable_count = residual_risk_rating_counts.get('Sustainable', 0)
 
-            risk_appetite = st.session_state.get('risk_appetite', [])
-            mask = (~filtered_data['inherent_risk_rating'].isin(risk_appetite)) & \
-                   (~filtered_data['residual_risk_rating'].isin(risk_appetite))
-            risk_register = filtered_data[mask]
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("Critical Residual Risks", residual_critical_count)
+                    with col2:
+                        st.metric("Severe Residual Risks", residual_severe_count)
+                    with col3:
+                        st.metric("Moderate Residual Risks", residual_moderate_count)
+                    with col4:
+                        st.metric("Sustainable Residual Risks", residual_sustainable_count)
+                else:
+                    st.warning("The column 'residual_risk_rating' is missing from the data.")
 
-            risk_rating_counts = risk_register['inherent_risk_rating'].value_counts()
+                # Optionally call your styling function if defined
+                style_metric_cards(border_left_color="#DBF227")
 
-            critical_count = risk_rating_counts.get('Critical', 0)
-            severe_count = risk_rating_counts.get('Severe', 0)
-            moderate_count = risk_rating_counts.get('Moderate', 0)
-            sustainable_count = risk_rating_counts.get('Sustainable', 0)
+                if 'risk_type' in filtered_data.columns:
+                    risk_type_counts = filtered_data['risk_type'].value_counts()
 
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Critical Inherent Risks", critical_count)
-            with col2:
-                st.metric("Severe Inherent Risks", severe_count)
-            with col3:
-                st.metric("Moderate Inherent Risks", moderate_count)
-            with col4:
-                st.metric("Sustainable Inherent Risks", sustainable_count)
+                    fig, ax = plt.subplots(figsize=(10, 6))
+                    bars = ax.bar(risk_type_counts.index, risk_type_counts.values, color='skyblue')
+                    ax.set_title("Risk Types Count")
+                    ax.set_ylabel("Count")
+                    ax.set_xticklabels(risk_type_counts.index, rotation=45)
 
-            style_metric_cards(border_left_color="#DBF227")
+                    for bar in bars:
+                        yval = bar.get_height()
+                        ax.text(bar.get_x() + bar.get_width()/2, yval - 0.5, yval, ha='center', va='bottom', color='black')
 
-            residual_risk_rating_counts = risk_register['residual_risk_rating'].value_counts()
+                    plt.tight_layout()
+                    st.pyplot(fig)
+                else:
+                    st.warning("The column 'risk_type' is missing from the data.")
 
-            residual_critical_count = residual_risk_rating_counts.get('Critical', 0)
-            residual_severe_count = residual_risk_rating_counts.get('Severe', 0)
-            residual_moderate_count = residual_risk_rating_counts.get('Moderate', 0)
-            residual_sustainable_count = residual_risk_rating_counts.get('Sustainable', 0)
+                # After Risk Appetite Analysis
+                st.subheader('After Risk Appetite')
+                
+                # Define the risk appetite based on risk type
+                def get_risk_appetite(risk_type):
+                    risk_appetite_map = {
+                        'Strategic risks': ['Critical', 'Severe'],
+                        'Operational risks': ['Sustainable', 'Moderate'],
+                        'Organizational risks': ['Sustainable', 'Moderate'],
+                        'Compliance & Regulatory risks': ['Sustainable', 'Moderate'],
+                        'Project risks': ['Sustainable', 'Moderate'],
+                        'Market risks': ['Sustainable', 'Moderate'],
+                        'Financial risks': ['Sustainable', 'Moderate'],
+                        'Reputational risks': ['Sustainable', 'Moderate']
+                    }
+                    return risk_appetite_map.get(risk_type, [])
 
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Critical Residual Risks", residual_critical_count)
-            with col2:
-                st.metric("Severe Residual Risks", residual_severe_count)
-            with col3:
-                st.metric("Moderate Residual Risks", residual_moderate_count)
-            with col4:
-                st.metric("Sustainable Residual Risks", residual_sustainable_count)
+                # Check for required columns before applying further filtering
+                if 'inherent_risk_rating' in filtered_data.columns and 'residual_risk_rating' in filtered_data.columns and 'risk_type' in filtered_data.columns:
+                    filtered_data['risk_appetite'] = filtered_data['risk_type'].apply(get_risk_appetite)
 
-            style_metric_cards(border_left_color="#DBF227")
+                    def residual_exceeds_appetite(row):
+                        # Define a mapping of risk levels for comparison purposes
+                        risk_levels = ['Low', 'Moderate', 'Sustainable', 'Severe', 'Critical']
 
-            risk_type_counts = risk_register['risk_type'].value_counts()
+                        # Check if risk appetite is empty
+                        if not row['risk_appetite']:
+                            return False  # or True if you want to keep risks with no defined appetite
 
-            fig = plt.figure(figsize=(10, 6))
-            bars = plt.bar(risk_type_counts.index, risk_type_counts.values, color='skyblue')
-            plt.title("Risk Types Count")
-            plt.ylabel("Count")
-            plt.xticks(rotation=45)
+                        # Find the maximum level in the appetite for comparison
+                        max_appetite_level = max(row['risk_appetite'], key=lambda level: risk_levels.index(level))
 
-            for bar in bars:
-                yval = bar.get_height()
-                plt.text(bar.get_x() + bar.get_width()/2, yval - 0.5, yval, ha='center', va='bottom', color='black')
+                        # Check if residual risk rating exceeds the maximum appetite level
+                        return risk_levels.index(row['residual_risk_rating']) > risk_levels.index(max_appetite_level)
 
-            plt.tight_layout()
-            st.pyplot(fig)
-       
+                    risk_register = filtered_data[filtered_data.apply(residual_exceeds_appetite, axis=1)]
+
+                    risk_rating_counts = risk_register['inherent_risk_rating'].value_counts()
+
+                    critical_count = risk_rating_counts.get('Critical', 0)
+                    severe_count = risk_rating_counts.get('Severe', 0)
+                    moderate_count = risk_rating_counts.get('Moderate', 0)
+                    sustainable_count = risk_rating_counts.get('Sustainable', 0)
+
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("Critical Inherent Risks", critical_count)
+                    with col2:
+                        st.metric("Severe Inherent Risks", severe_count)
+                    with col3:
+                        st.metric("Moderate Inherent Risks", moderate_count)
+                    with col4:
+                        st.metric("Sustainable Inherent Risks", sustainable_count)
+
+                    residual_risk_rating_counts = risk_register['residual_risk_rating'].value_counts()
+
+                    residual_critical_count = residual_risk_rating_counts.get('Critical', 0)
+                    residual_severe_count = residual_risk_rating_counts.get('Severe', 0)
+                    residual_moderate_count = residual_risk_rating_counts.get('Moderate', 0)
+                    residual_sustainable_count = residual_risk_rating_counts.get('Sustainable', 0)
+
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("Critical Residual Risks", residual_critical_count)
+                    with col2:
+                        st.metric("Severe Residual Risks", residual_severe_count)
+                    with col3:
+                        st.metric("Moderate Residual Risks", residual_moderate_count)
+                    with col4:
+                        st.metric("Sustainable Residual Risks", residual_sustainable_count)
+
+                    # Optionally call your styling function if defined
+                    style_metric_cards(border_left_color="#DBF227")
+
+                    if 'risk_type' in risk_register.columns:
+                        risk_type_counts = risk_register['risk_type'].value_counts()
+
+                        fig, ax = plt.subplots(figsize=(10, 6))
+                        bars = ax.bar(risk_type_counts.index, risk_type_counts.values, color='skyblue')
+                        ax.set_title("Risk Types Count")
+                        ax.set_ylabel("Count")
+                        ax.set_xticklabels(risk_type_counts.index, rotation=45)
+
+                        for bar in bars:
+                            yval = bar.get_height()
+                            ax.text(bar.get_x() + bar.get_width()/2, yval - 0.5, yval, ha='center', va='bottom', color='black')
+
+                        plt.tight_layout()
+                        st.pyplot(fig)
+                    else:
+                        st.warning("The column 'risk_type' is missing from the risk register data.")
+                else:
+                    st.warning("The necessary columns for 'inherent_risk_rating' or 'residual_risk_rating' are missing from the data.")
+
         elif tab == 'Risks Owners & Control Owners':
             st.markdown("""
             <style>
@@ -931,55 +1215,86 @@ def main():
             st.subheader('Risks Owners & Control Owners')
             
             st.subheader('Date Filters')
+           
+            # Load data from session state
+            risk_data = st.session_state.get('risk_data', pd.DataFrame())
 
-            risk_data = st.session_state['risk_data']
+            # Initialize filtered_data as an empty DataFrame
+            filtered_data = pd.DataFrame()
 
-            # Ensure 'date_last_updated' is in datetime format
-            risk_data['date_last_updated'] = pd.to_datetime(risk_data['date_last_updated'])
+            # Check if the DataFrame is not empty and contains the 'date_last_updated' column
+            if not risk_data.empty and 'date_last_updated' in risk_data.columns:
+                # Ensure 'date_last_updated' is in datetime format, coerce errors to NaT
+                risk_data['date_last_updated'] = pd.to_datetime(risk_data['date_last_updated'], errors='coerce')
 
-            # Date filter section
-            min_date = risk_data['date_last_updated'].min().date()
-            max_date = risk_data['date_last_updated'].max().date()
+                # Date filter section: ensure min_date and max_date are valid
+                min_date = risk_data['date_last_updated'].min()
+                max_date = risk_data['date_last_updated'].max()
 
-            from_date = st.date_input('From', value=min_date, min_value=min_date, max_value=max_date)
-            to_date = st.date_input('To', value=max_date, min_value=min_date, max_value=max_date)
+                # Handle cases where min_date or max_date might be NaT
+                if pd.isnull(min_date):
+                    min_date = datetime.today().date()
+                else:
+                    min_date = min_date.date()
 
-            # Apply date filter to the data
-            filtered_data = risk_data[(risk_data['date_last_updated'] >= pd.Timestamp(from_date)) &
-                                      (risk_data['date_last_updated'] <= pd.Timestamp(to_date))]
+                if pd.isnull(max_date):
+                    max_date = datetime.today().date()
+                else:
+                    max_date = max_date.date()
 
-            # Plotting Risk Owners Count
-            risk_owners_counts = filtered_data['risk_owners'].value_counts()
+                # Use the dates in the Streamlit date input
+                from_date = st.date_input('From', value=min_date, min_value=min_date, max_value=max_date)
+                to_date = st.date_input('To', value=max_date, min_value=min_date, max_value=max_date)
 
-            fig = plt.figure(figsize=(10, 6))
-            bars = plt.bar(risk_owners_counts.index, risk_owners_counts.values, color='skyblue')
-            plt.title("Risk Owners Count")
-            plt.ylabel("Risk Count")
-            plt.xticks(rotation=45)
+                # Apply date filter to the data
+                filtered_data = risk_data[(risk_data['date_last_updated'] >= pd.Timestamp(from_date)) &
+                                          (risk_data['date_last_updated'] <= pd.Timestamp(to_date))]
+            else:
+                st.warning("The data is empty or missing the 'date_last_updated' column.")
 
-            for bar in bars:
-                yval = bar.get_height()
-                plt.text(bar.get_x() + bar.get_width()/2, yval - 0.5, yval, ha='center', va='bottom', color='black')
+            # If filtered_data is empty, provide a message
+            if filtered_data.empty:
+                st.info("No data available for the selected date range.")
+            else:
+                # Check if 'risk_owners' column exists before plotting
+                if 'risk_owners' in filtered_data.columns:
+                    risk_owners_counts = filtered_data['risk_owners'].value_counts()
 
-            plt.tight_layout()
-            st.pyplot(fig)
+                    fig = plt.figure(figsize=(10, 6))
+                    bars = plt.bar(risk_owners_counts.index, risk_owners_counts.values, color='skyblue')
+                    plt.title("Risk Owners Count")
+                    plt.ylabel("Risk Count")
+                    plt.xticks(rotation=45)
 
-            # Plotting Risk Control Owners Count
-            risk_control_owners_counts = filtered_data['control_owners'].value_counts()
+                    for bar in bars:
+                        yval = bar.get_height()
+                        plt.text(bar.get_x() + bar.get_width()/2, yval - 0.5, yval, ha='center', va='bottom', color='black')
 
-            fig = plt.figure(figsize=(10, 6))
-            bars = plt.bar(risk_control_owners_counts.index, risk_control_owners_counts.values, color='skyblue')
-            plt.title("Risk Control Owners Count")
-            plt.ylabel("Risk Count")
-            plt.xticks(rotation=45)
+                    plt.tight_layout()
+                    st.pyplot(fig)
+                else:
+                    st.warning("The column 'risk_owners' is missing from the data.")
 
-            for bar in bars:
-                yval = bar.get_height()
-                plt.text(bar.get_x() + bar.get_width()/2, yval - 0.5, yval, ha='center', va='bottom', color='black')
+                # Check if 'control_owners' column exists before plotting
+                if 'control_owners' in filtered_data.columns:
+                    risk_control_owners_counts = filtered_data['control_owners'].value_counts()
 
-            plt.tight_layout()
-            st.pyplot(fig)
-                   
+                    fig = plt.figure(figsize=(10, 6))
+                    bars = plt.bar(risk_control_owners_counts.index, risk_control_owners_counts.values, color='skyblue')
+                    plt.title("Risk Control Owners Count")
+                    plt.ylabel("Risk Count")
+                    plt.xticks(rotation=45)
+
+                    for bar in bars:
+                        yval = bar.get_height()
+                        plt.text(bar.get_x() + bar.get_width()/2, yval - 0.5, yval, ha='center', va='bottom', color='black')
+
+                    plt.tight_layout()
+                    st.pyplot(fig)
+                else:
+                    st.warning("The column 'control_owners' is missing from the data.")
+            
+          
         elif tab == 'Adjusted Risk Matrices':
             color_mapping = {
                 "Critical": "red",
@@ -1028,131 +1343,217 @@ def main():
                 plt.tight_layout()
                 st.pyplot(fig)
                 
-            st.subheader('Date Filters')
+            st.subheader('Risks Filters')
+            
+            # Define colors for each risk rating
+            colors = {
+                'Sustainable': 'background-color: green',
+                'Moderate': 'background-color: yellow',
+                'Severe': 'background-color: orange',
+                'Critical': 'background-color: red'
+            }
 
+            # Function to apply styles
+            def highlight_risk(rating):
+                return colors.get(rating, '')
+            
             # Load or fetch data
             risk_data = st.session_state.get('risk_data', fetch_all_from_risk_data())
 
-            # Ensure 'date_last_updated' is in datetime format
-            risk_data['date_last_updated'] = pd.to_datetime(risk_data['date_last_updated'])
+            # Initialize filtered_data as an empty DataFrame
+            filtered_data = pd.DataFrame()
 
-            # Date filter section
-            min_date = risk_data['date_last_updated'].min().date()
-            max_date = risk_data['date_last_updated'].max().date()
+            # Check if the DataFrame is not empty and contains the 'date_last_updated' column
+            if not risk_data.empty and 'date_last_updated' in risk_data.columns:
+                # Ensure 'date_last_updated' is in datetime format, coerce errors to NaT
+                risk_data['date_last_updated'] = pd.to_datetime(risk_data['date_last_updated'], errors='coerce')
 
-            from_date = st.date_input('From', value=min_date, min_value=min_date, max_value=max_date)
-            to_date = st.date_input('To', value=max_date, min_value=min_date, max_value=max_date)
+                # Date filter section: ensure min_date and max_date are valid
+                min_date = risk_data['date_last_updated'].min()
+                max_date = risk_data['date_last_updated'].max()
 
-            # Apply date filter to the data
-            filtered_data = risk_data[(risk_data['date_last_updated'] >= pd.Timestamp(from_date)) &
-                                      (risk_data['date_last_updated'] <= pd.Timestamp(to_date))]
+                # Handle cases where min_date or max_date might be NaT
+                if pd.isnull(min_date):
+                    min_date = datetime.today().date()  # Set to today's date if NaT
+                else:
+                    min_date = min_date.date()  # Convert to datetime.date
 
-            st.header('Adjusted Risk Matrices')
-            st.subheader('Before Risk Appetite')
+                if pd.isnull(max_date):
+                    max_date = datetime.today().date()  # Set to today's date if NaT
+                else:
+                    max_date = max_date.date()  # Convert to datetime.date
 
-            probability_mapping = {
-                "Very Low": 1,
-                "Low": 2,
-                "Medium": 3,
-                "High": 4,
-                "Very High": 5
-            }
+                # Use the dates in the Streamlit date input, ensuring they are valid
+                from_date = st.date_input('From', value=min_date, min_value=min_date, max_value=max_date)
+                to_date = st.date_input('To', value=max_date, min_value=min_date, max_value=max_date)
 
-            required_columns = [
-                'inherent_risk_probability', 'inherent_risk_impact',
-                'residual_risk_probability', 'residual_risk_impact'
+                # Apply date filter to the data, ensuring proper conversion to Timestamp
+                filtered_data = risk_data[(risk_data['date_last_updated'] >= pd.Timestamp(from_date)) &
+                                          (risk_data['date_last_updated'] <= pd.Timestamp(to_date))]
+            else:
+                st.warning("The data is empty or missing the 'date_last_updated' column.")
+
+            # Define subsidiaries and add 'All' option, then sort alphabetically
+            subsidiaries = [
+                'All',
+                'Varichem Pharmaceuticals',
+                'Greenwood Pharmacy',
+                'Greenwood Wholesalers',
+                'Prochem',
+                'Kasuru Investments',
+                'Varifreight',
+                'Variplastics'
             ]
+            subsidiaries.sort()
 
-            missing_columns = [col for col in required_columns if col not in filtered_data.columns]
-            if missing_columns:
-                st.error(f"Missing columns in risk_data: {', '.join(missing_columns)}")
-                return
+            # Add a selectbox for subsidiary filtering
+            selected_subsidiary = st.selectbox('Select Subsidiary', subsidiaries)
 
-            filtered_data['inherent_risk_probability_num'] = filtered_data['inherent_risk_probability'].map(probability_mapping)
-            filtered_data['inherent_risk_impact_num'] = filtered_data['inherent_risk_impact'].map(probability_mapping)
-            filtered_data['residual_risk_probability_num'] = filtered_data['residual_risk_probability'].map(probability_mapping)
-            filtered_data['residual_risk_impact_num'] = filtered_data['residual_risk_impact'].map(probability_mapping)
+            # Apply subsidiary filter if not 'All'
+            if selected_subsidiary != 'All':
+                filtered_data = filtered_data[(filtered_data['Subsidiary'] == selected_subsidiary) | (filtered_data['Subsidiary'].isna())]
 
-            inherent_risk_matrix = np.empty((5, 5), dtype=object)
-            residual_risk_matrix = np.empty((5, 5), dtype=object)
-            inherent_risk_count_matrix = np.zeros((5, 5), dtype=int)
-            residual_risk_count_matrix = np.zeros((5, 5), dtype=int)
+            st.subheader('Risk Data')
 
-            for _, row in filtered_data.iterrows():
-                prob_num = row.get('inherent_risk_probability_num')
-                impact_num = row.get('inherent_risk_impact_num')
-                inherent_risk_rating = row.get('inherent_risk_rating')
-                if prob_num and impact_num and inherent_risk_rating in color_mapping:
-                    inherent_risk_matrix[5 - prob_num, impact_num - 1] = inherent_risk_rating
-                    inherent_risk_count_matrix[5 - prob_num, impact_num - 1] += 1
+            # If filtered_data is empty, provide a message and set default date inputs
+            if filtered_data.empty:
+                st.info("No data available for the selected date range and subsidiary.")
 
-                prob_num = row.get('residual_risk_probability_num')
-                impact_num = row.get('residual_risk_impact_num')
-                residual_risk_rating = row.get('residual_risk_rating')
-                if prob_num and impact_num and residual_risk_rating in color_mapping:
-                    residual_risk_matrix[5 - prob_num, impact_num - 1] = residual_risk_rating
-                    residual_risk_count_matrix[5 - prob_num, impact_num - 1] += 1
+            else:
+                # Before Risk Appetite Analysis
+                st.subheader('Before Risk Appetite')
 
-            master_risk_matrix = np.array([
-                ["Moderate", "Severe", "Severe", "Critical", "Critical"],
-                ["Moderate", "Moderate", "Severe", "Critical", "Critical"],
-                ["Sustainable", "Moderate", "Severe", "Severe", "Critical"],
-                ["Sustainable", "Sustainable", "Moderate", "Severe", "Critical"],
-                ["Sustainable", "Sustainable", "Moderate", "Moderate", "Severe"]
-            ])
+                probability_mapping = {
+                    "Very Low": 1,
+                    "Low": 2,
+                    "Medium": 3,
+                    "High": 4,
+                    "Very High": 5
+                }
 
-            for i in range(5):
-                for j in range(5):
-                    if not inherent_risk_matrix[i, j]:
-                        inherent_risk_matrix[i, j] = master_risk_matrix[i, j]
-                    if not residual_risk_matrix[i, j]:
-                        residual_risk_matrix[i, j] = master_risk_matrix[i, j]
+                required_columns = [
+                    'inherent_risk_probability', 'inherent_risk_impact',
+                    'residual_risk_probability', 'residual_risk_impact'
+                ]
 
-            plot_risk_matrix_with_axes_labels(inherent_risk_count_matrix, inherent_risk_matrix, "Inherent Risk Matrix with Counts")
-            plot_risk_matrix_with_axes_labels(residual_risk_count_matrix, residual_risk_matrix, "Residual Risk Matrix with Counts")
+                missing_columns = [col for col in required_columns if col not in filtered_data.columns]
+                if missing_columns:
+                    st.error(f"Missing columns in risk_data: {', '.join(missing_columns)}")
+                else:
+                    filtered_data['inherent_risk_probability_num'] = filtered_data['inherent_risk_probability'].map(probability_mapping)
+                    filtered_data['inherent_risk_impact_num'] = filtered_data['inherent_risk_impact'].map(probability_mapping)
+                    filtered_data['residual_risk_probability_num'] = filtered_data['residual_risk_probability'].map(probability_mapping)
+                    filtered_data['residual_risk_impact_num'] = filtered_data['residual_risk_impact'].map(probability_mapping)
 
-            st.subheader('After Risk Appetite')
+                    inherent_risk_matrix = np.empty((5, 5), dtype=object)
+                    residual_risk_matrix = np.empty((5, 5), dtype=object)
+                    inherent_risk_count_matrix = np.zeros((5, 5), dtype=int)
+                    residual_risk_count_matrix = np.zeros((5, 5), dtype=int)
 
-            risk_appetite = st.session_state.get('risk_appetite', [])
-            mask = (~filtered_data['inherent_risk_rating'].isin(risk_appetite)) & \
-                   (~filtered_data['residual_risk_rating'].isin(risk_appetite))
-            risk_register = filtered_data[mask]
+                    for _, row in filtered_data.iterrows():
+                        prob_num = row.get('inherent_risk_probability_num')
+                        impact_num = row.get('inherent_risk_impact_num')
+                        inherent_risk_rating = row.get('inherent_risk_rating')
+                        if prob_num and impact_num and inherent_risk_rating in colors:
+                            inherent_risk_matrix[5 - prob_num, impact_num - 1] = inherent_risk_rating
+                            inherent_risk_count_matrix[5 - prob_num, impact_num - 1] += 1
 
-            risk_register['inherent_risk_probability_num'] = risk_register['inherent_risk_probability'].map(probability_mapping)
-            risk_register['inherent_risk_impact_num'] = risk_register['inherent_risk_impact'].map(probability_mapping)
-            risk_register['residual_risk_probability_num'] = risk_register['residual_risk_probability'].map(probability_mapping)
-            risk_register['residual_risk_impact_num'] = risk_register['residual_risk_impact'].map(probability_mapping)
+                        prob_num = row.get('residual_risk_probability_num')
+                        impact_num = row.get('residual_risk_impact_num')
+                        residual_risk_rating = row.get('residual_risk_rating')
+                        if prob_num and impact_num and residual_risk_rating in colors:
+                            residual_risk_matrix[5 - prob_num, impact_num - 1] = residual_risk_rating
+                            residual_risk_count_matrix[5 - prob_num, impact_num - 1] += 1
 
-            inherent_risk_matrix = np.empty((5, 5), dtype=object)
-            residual_risk_matrix = np.empty((5, 5), dtype=object)
-            inherent_risk_count_matrix = np.zeros((5, 5), dtype=int)
-            residual_risk_count_matrix = np.zeros((5, 5), dtype=int)
+                    master_risk_matrix = np.array([
+                        ["Moderate", "Severe", "Severe", "Critical", "Critical"],
+                        ["Sustainable", "Moderate", "Severe", "Critical", "Critical"],
+                        ["Sustainable", "Moderate", "Moderate", "Severe", "Critical"],
+                        ["Sustainable", "Sustainable", "Moderate", "Severe", "Critical"],
+                        ["Sustainable", "Sustainable", "Sustainable", "Moderate", "Severe"]
+                    ])
 
-            for _, row in risk_register.iterrows():
-                prob_num = row.get('inherent_risk_probability_num')
-                impact_num = row.get('inherent_risk_impact_num')
-                inherent_risk_rating = row.get('inherent_risk_rating')
-                if prob_num and impact_num and inherent_risk_rating in color_mapping:
-                    inherent_risk_matrix[5 - prob_num, impact_num - 1] = inherent_risk_rating
-                    inherent_risk_count_matrix[5 - prob_num, impact_num - 1] += 1
+                    for i in range(5):
+                        for j in range(5):
+                            if not inherent_risk_matrix[i, j]:
+                                inherent_risk_matrix[i, j] = master_risk_matrix[i, j]
+                            if not residual_risk_matrix[i, j]:
+                                residual_risk_matrix[i, j] = master_risk_matrix[i, j]
 
-                prob_num = row.get('residual_risk_probability_num')
-                impact_num = row.get('residual_risk_impact_num')
-                residual_risk_rating = row.get('residual_risk_rating')
-                if prob_num and impact_num and residual_risk_rating in color_mapping:
-                    residual_risk_matrix[5 - prob_num, impact_num - 1] = residual_risk_rating
-                    residual_risk_count_matrix[5 - prob_num, impact_num - 1] += 1
+                    plot_risk_matrix_with_axes_labels(inherent_risk_count_matrix, inherent_risk_matrix, "Inherent Risk Matrix with Counts")
+                    plot_risk_matrix_with_axes_labels(residual_risk_count_matrix, residual_risk_matrix, "Residual Risk Matrix with Counts")
 
-            for i in range(5):
-                for j in range(5):
-                    if not inherent_risk_matrix[i, j]:
-                        inherent_risk_matrix[i, j] = master_risk_matrix[i, j]
-                    if not residual_risk_matrix[i, j]:
-                        residual_risk_matrix[i, j] = master_risk_matrix[i, j]
+                    st.subheader('After Risk Appetite')
+                    
+                    # Define the risk appetite based on risk type
+                    def get_risk_appetite(risk_type):
+                        risk_appetite_map = {
+                            'Strategic risks': ['Critical', 'Severe'],
+                            'Operational risks': ['Sustainable', 'Moderate'],
+                            'Organizational risks': ['Sustainable', 'Moderate'],
+                            'Compliance & Regulatory risks': ['Sustainable', 'Moderate'],
+                            'Project risks': ['Sustainable', 'Moderate'],
+                            'Market risks': ['Sustainable', 'Moderate'],
+                            'Financial risks': ['Sustainable', 'Moderate'],
+                            'Reputational risks': ['Sustainable', 'Moderate']
+                        }
+                        return risk_appetite_map.get(risk_type, [])
 
-            plot_risk_matrix_with_axes_labels(inherent_risk_count_matrix, inherent_risk_matrix, "Inherent Risk Matrix with Counts")
-            plot_risk_matrix_with_axes_labels(residual_risk_count_matrix, residual_risk_matrix, "Residual Risk Matrix with Counts")
-            
+                    # Check for required columns before applying further filtering
+                    if 'inherent_risk_rating' in filtered_data.columns and 'residual_risk_rating' in filtered_data.columns and 'risk_type' in filtered_data.columns:
+                        filtered_data['risk_appetite'] = filtered_data['risk_type'].apply(get_risk_appetite)
+
+                        def residual_exceeds_appetite(row):
+                            # Define a mapping of risk levels for comparison purposes
+                            risk_levels = ['Low', 'Moderate', 'Sustainable', 'Severe', 'Critical']
+
+                            # Check if risk appetite is empty
+                            if not row['risk_appetite']:
+                                return False  # or True if you want to keep risks with no defined appetite
+
+                            # Find the maximum level in the appetite for comparison
+                            max_appetite_level = max(row['risk_appetite'], key=lambda level: risk_levels.index(level))
+
+                            # Check if residual risk rating exceeds the maximum appetite level
+                            return risk_levels.index(row['residual_risk_rating']) > risk_levels.index(max_appetite_level)
+
+                        risk_register = filtered_data[filtered_data.apply(residual_exceeds_appetite, axis=1)]
+
+                    risk_register['inherent_risk_probability_num'] = risk_register['inherent_risk_probability'].map(probability_mapping)
+                    risk_register['inherent_risk_impact_num'] = risk_register['inherent_risk_impact'].map(probability_mapping)
+                    risk_register['residual_risk_probability_num'] = risk_register['residual_risk_probability'].map(probability_mapping)
+                    risk_register['residual_risk_impact_num'] = risk_register['residual_risk_impact'].map(probability_mapping)
+
+                    inherent_risk_matrix = np.empty((5, 5), dtype=object)
+                    residual_risk_matrix = np.empty((5, 5), dtype=object)
+                    inherent_risk_count_matrix = np.zeros((5, 5), dtype=int)
+                    residual_risk_count_matrix = np.zeros((5, 5), dtype=int)
+
+                    for _, row in risk_register.iterrows():
+                        prob_num = row.get('inherent_risk_probability_num')
+                        impact_num = row.get('inherent_risk_impact_num')
+                        inherent_risk_rating = row.get('inherent_risk_rating')
+                        if prob_num and impact_num and inherent_risk_rating in colors:
+                            inherent_risk_matrix[5 - prob_num, impact_num - 1] = inherent_risk_rating
+                            inherent_risk_count_matrix[5 - prob_num, impact_num - 1] += 1
+
+                        prob_num = row.get('residual_risk_probability_num')
+                        impact_num = row.get('residual_risk_impact_num')
+                        residual_risk_rating = row.get('residual_risk_rating')
+                        if prob_num and impact_num and residual_risk_rating in colors:
+                            residual_risk_matrix[5 - prob_num, impact_num - 1] = residual_risk_rating
+                            residual_risk_count_matrix[5 - prob_num, impact_num - 1] += 1
+
+                    for i in range(5):
+                        for j in range(5):
+                            if not inherent_risk_matrix[i, j]:
+                                inherent_risk_matrix[i, j] = master_risk_matrix[i, j]
+                            if not residual_risk_matrix[i, j]:
+                                residual_risk_matrix[i, j] = master_risk_matrix[i, j]
+
+                    plot_risk_matrix_with_axes_labels(inherent_risk_count_matrix, inherent_risk_matrix, "Inherent Risk Matrix with Counts")
+                    plot_risk_matrix_with_axes_labels(residual_risk_count_matrix, residual_risk_matrix, "Residual Risk Matrix with Counts")
+           
         elif tab == 'Delete Risk':
             st.subheader('Delete Risk from Risk Data')
             if not st.session_state['risk_data'].empty:
@@ -1169,8 +1570,12 @@ def main():
         elif tab == 'Update Risk':
             st.subheader('Update Risk in Risk Data')
             if not st.session_state['risk_data'].empty:
+                # Fetch the risk descriptions for selection
                 risk_to_update = st.selectbox('Select a risk to update', fetch_all_from_risk_data()['risk_description'].tolist())
+                # Select the row corresponding to the selected risk description
                 selected_risk_row = st.session_state['risk_data'][st.session_state['risk_data']['risk_description'] == risk_to_update].iloc[0]
+
+                # Display fields for updating the risk
                 updated_risk_description = st.text_input('risk_description', value=selected_risk_row['risk_description'])
                 updated_cause_consequences = st.text_input('cause_consequences', value=selected_risk_row['cause_consequences'])
                 updated_risk_owners = st.text_input('risk_owners', value=selected_risk_row['risk_owners'])
@@ -1182,6 +1587,15 @@ def main():
                 updated_residual_risk_impact = st.selectbox('residual_risk_impact', list(risk_levels.keys()), index=list(risk_levels.keys()).index(selected_risk_row['residual_risk_impact']))
                 updated_by = st.text_input('updated_by', value=selected_risk_row['updated_by'])
                 updated_date_last_updated = st.date_input('date_last_updated', value=selected_risk_row['date_last_updated'])
+
+                # New field for updating Subsidiary
+                updated_subsidiary = st.selectbox('Subsidiary', sorted([
+                    'Varichem Pharmaceuticals', 'Greenwood Pharmacy', 'Greenwood Wholesalers',
+                    'Prochem', 'Kasuru Investments', 'Varifreight', 'Variplastics'
+                ]), index=sorted([
+                    'Varichem Pharmaceuticals', 'Greenwood Pharmacy', 'Greenwood Wholesalers',
+                    'Prochem', 'Kasuru Investments', 'Varifreight', 'Variplastics'
+                ]).index(selected_risk_row['Subsidiary']))
 
                 if st.button('Update Risk'):
                     updated_risk = {
@@ -1198,7 +1612,8 @@ def main():
                         'control_owners': updated_control_owners,
                         'residual_risk_probability': updated_residual_risk_probability,
                         'residual_risk_impact': updated_residual_risk_impact,
-                        'residual_risk_rating': calculate_risk_rating(updated_residual_risk_probability, updated_residual_risk_impact)
+                        'residual_risk_rating': calculate_risk_rating(updated_residual_risk_probability, updated_residual_risk_impact),
+                        'Subsidiary': updated_subsidiary  # Include the updated subsidiary in the risk update
                     }
 
                     old_data = st.session_state['risk_data'].copy()
