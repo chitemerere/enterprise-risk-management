@@ -495,17 +495,17 @@ def main():
         def plot_risk_matrix():
             fig = plt.figure(figsize=(10, 10))
             plt.subplots_adjust(wspace=0, hspace=0)
-
-            # Setting x-ticks with corresponding percentages
+            
+            # Setting y-ticks with corresponding percentages
             plt.xticks([0.5, 1.5, 2.5, 3.5, 4.5], 
-                       ['Very Low\n(0%-10%)', 'Low\n(11%-25%)', 'Medium\n(26%-50%)', 'High\n(51%-90%)', 'Very High\n(91%-100%)'])
-            plt.yticks([0.5, 1.5, 2.5, 3.5, 4.5], 
                        ['Very Low', 'Low', 'Medium', 'High', 'Very High'])
+            plt.yticks([0.5, 1.5, 2.5, 3.5, 4.5], 
+                       ['Very Low\n(0%-10%)', 'Low\n(11%-25%)', 'Medium\n(26%-50%)', 'High\n(51%-90%)', 'Very High\n(91%-100%)'])
 
             plt.xlim(0, 5)
             plt.ylim(0, 5)
-            plt.xlabel('Probability', fontsize=18)
-            plt.ylabel('Impact', fontsize=18)
+            plt.xlabel('Impact', fontsize=18)
+            plt.ylabel('Probability', fontsize=18)
 
             nrows = 5
             ncols = 5
