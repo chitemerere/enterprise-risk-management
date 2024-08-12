@@ -491,7 +491,7 @@ def main():
 
     if st.session_state.logged_in:
         # Main application content goes here
-        # Main application content goes here
+   
         def plot_risk_matrix():
             fig = plt.figure(figsize=(10, 10))
             plt.subplots_adjust(wspace=0, hspace=0)
@@ -637,15 +637,19 @@ def main():
             
             # Define risk types and their corresponding appetite levels
             risk_data = [
-                ("Strategic", "Severe", "Critical"),
-                ("Operational", "Sustainable", "Moderate"),
-                ("Organizational", "Sustainable", "Moderate"),
-                ("Project", "Sustainable", "Moderate"),
-                ("Market", "Sustainable", "Moderate"),
-                ("Compliance & Regulatory", "Sustainable", "Moderate"),
-                ("Financial", "Moderate", "Moderate"),
-                ("Reputational", "Sustainable", "Moderate")
+                ("Strategic Risk", "Severe", "Critical"),
+                ("Operational Risk", "Sustainable", "Moderate"),
+                ("Economic Risk", "Sustainable", "Moderate"),
+                ("Project Risk", "Sustainable", "Moderate"),
+                ("Compliance Risk", "Sustainable", "Moderate"),
+                ("Financial Risk", "Moderate", "Moderate"),
+                ("Legal Risk", "Sustainable", "Moderate"),
+                ("Natural Disasters", "Sustainable", "Moderate"),
+                ("Security Risk", "Sustainable", "Moderate")
             ]
+            
+            # Sort the risks alphabetically by the first element in each tuple
+            risk_data.sort(key=lambda x: x[0])
 
             # Define colors for risk levels
             color_map = {
@@ -737,9 +741,9 @@ def main():
             st.subheader('Enter Risk Details')
           
             st.session_state['risk_type'] = st.selectbox('Risk Type', sorted([
-                'Strategic risk', 'Operational risks', 'Organizational risks', 
-                'Reputation risks', 'Market risks', 'Compliance & Regulatory risks', 
-                'Hazard risks', 'Financial risks', 'Project risks'
+                'Strategic Risk', 'Operational Risk', 'Economic Risk', 
+                'Legal Risk', 'Compliance Risk', 'Natural Disaster',
+                'Security Risk', 'Financial Risk', 'Project Risk'
             ]))
 
             st.session_state['updated_by'] = st.text_input('Updated By')
@@ -906,14 +910,15 @@ def main():
             # Define the risk appetite based on risk type
             def get_risk_appetite(risk_type):
                 risk_appetite_map = {
-                    'Strategic risks': ['Critical', 'Severe'],
-                    'Operational risks': ['Sustainable', 'Moderate'],
-                    'Organizational risks': ['Sustainable', 'Moderate'],
-                    'Compliance & Regulatory risks': ['Sustainable', 'Moderate'],
-                    'Project risks': ['Sustainable', 'Moderate'],
-                    'Market risks': ['Sustainable', 'Moderate'],
-                    'Financial risks': ['Moderate', 'Moderate'],
-                    'Reputational risks': ['Sustainable', 'Moderate']
+                    'Strategic Risk': ['Critical', 'Severe'],
+                    'Operational Risk': ['Sustainable', 'Moderate'],
+                    'Economic Risk': ['Sustainable', 'Moderate'],
+                    'Compliance Risk': ['Sustainable', 'Moderate'],
+                    'Project Risk': ['Sustainable', 'Moderate'],
+                    'Legal Risk': ['Sustainable', 'Moderate'],
+                    'Financial Risk': ['Moderate', 'Moderate'],
+                    'Natural Disasters': ['Sustainable', 'Moderate'],
+                    'Security Risk': ['Sustainable', 'Moderate']
                 }
                 return risk_appetite_map.get(risk_type, [])
 
@@ -936,28 +941,32 @@ def main():
                     return risk_levels.index(row['residual_risk_rating']) > risk_levels.index(max_appetite_level)
 
                 risk_register = filtered_data[filtered_data.apply(residual_exceeds_appetite, axis=1)]
+
+                if not risk_register.empty:
+                    # Apply the style to both columns
+                    styled_risk_data = risk_register.style.applymap(highlight_risk, subset=['inherent_risk_rating', 'residual_risk_rating'])
+
+                    # Display the styled dataframe in Streamlit
+                    st.dataframe(styled_risk_data)
+
+                    # Convert the risk register to CSV format
+                    csv_register = risk_register.to_csv(index=False)
+
+                    # Generate a timestamp for the filename
+                    current_datetime = datetime.now().strftime('%Y%m%d%H%M%S')
+
+                    # Provide a download button for the CSV file
+                    st.download_button(
+                        label="Download Risk Register",
+                        data=csv_register,
+                        file_name=f"risk_register_{current_datetime}.csv",
+                        mime="text/csv",
+                    )
+                else:
+                    st.write("No risk register data available to display or download.")
             else:
                 st.warning("The data is missing required columns for filtering.")
-
-            # Apply the style to both columns
-            styled_risk_data = risk_register.style.applymap(highlight_risk, subset=['inherent_risk_rating', 'residual_risk_rating'])
-
-            # Display the styled dataframe in Streamlit
-            st.dataframe(styled_risk_data)
-
-            if not risk_register.empty:
-                csv_register = risk_register.to_csv(index=False)
-                current_datetime = datetime.now().strftime('%Y%m%d%H%M%S')
-                st.download_button(
-                    label="Download Risk Register",
-                    data=csv_register,
-                    file_name=f"risk_register_{current_datetime}.csv",
-                    mime="text/csv",
-                )
-            else:
-                st.write("No risk register data available to download.")
-            
-               
+                
         elif tab == 'Risks Overview':
             st.markdown("""
             <style>
@@ -1105,21 +1114,22 @@ def main():
 
                 # After Risk Appetite Analysis
                 st.subheader('After Risk Appetite')
-                
+                    
                 # Define the risk appetite based on risk type
                 def get_risk_appetite(risk_type):
                     risk_appetite_map = {
-                        'Strategic risks': ['Critical', 'Severe'],
-                        'Operational risks': ['Sustainable', 'Moderate'],
-                        'Organizational risks': ['Sustainable', 'Moderate'],
-                        'Compliance & Regulatory risks': ['Sustainable', 'Moderate'],
-                        'Project risks': ['Sustainable', 'Moderate'],
-                        'Market risks': ['Sustainable', 'Moderate'],
-                        'Financial risks': ['Sustainable', 'Moderate'],
-                        'Reputational risks': ['Sustainable', 'Moderate']
+                        'Strategic Risk': ['Critical', 'Severe'],
+                        'Operational Risk': ['Sustainable', 'Moderate'],
+                        'Economic Risk': ['Sustainable', 'Moderate'],
+                        'Compliance Risk': ['Sustainable', 'Moderate'],
+                        'Project Risk': ['Sustainable', 'Moderate'],
+                        'Legal Risk': ['Sustainable', 'Moderate'],
+                        'Financial Risk': ['Moderate', 'Moderate'],
+                        'Natural Disasters': ['Sustainable', 'Moderate'],
+                        'Security Risk': ['Sustainable', 'Moderate']
                     }
                     return risk_appetite_map.get(risk_type, [])
-
+                
                 # Check for required columns before applying further filtering
                 if 'inherent_risk_rating' in filtered_data.columns and 'residual_risk_rating' in filtered_data.columns and 'risk_type' in filtered_data.columns:
                     filtered_data['risk_appetite'] = filtered_data['risk_type'].apply(get_risk_appetite)
@@ -1484,21 +1494,22 @@ def main():
                     plot_risk_matrix_with_axes_labels(residual_risk_count_matrix, residual_risk_matrix, "Residual Risk Matrix with Counts")
 
                     st.subheader('After Risk Appetite')
-                    
+                        
                     # Define the risk appetite based on risk type
                     def get_risk_appetite(risk_type):
                         risk_appetite_map = {
-                            'Strategic risks': ['Critical', 'Severe'],
-                            'Operational risks': ['Sustainable', 'Moderate'],
-                            'Organizational risks': ['Sustainable', 'Moderate'],
-                            'Compliance & Regulatory risks': ['Sustainable', 'Moderate'],
-                            'Project risks': ['Sustainable', 'Moderate'],
-                            'Market risks': ['Sustainable', 'Moderate'],
-                            'Financial risks': ['Sustainable', 'Moderate'],
-                            'Reputational risks': ['Sustainable', 'Moderate']
+                            'Strategic Risk': ['Critical', 'Severe'],
+                            'Operational Risk': ['Sustainable', 'Moderate'],
+                            'Economic Risk': ['Sustainable', 'Moderate'],
+                            'Compliance Risk': ['Sustainable', 'Moderate'],
+                            'Project Risk': ['Sustainable', 'Moderate'],
+                            'Legal Risk': ['Sustainable', 'Moderate'],
+                            'Financial Risk': ['Moderate', 'Moderate'],
+                            'Natural Disasters': ['Sustainable', 'Moderate'],
+                            'Security Risk': ['Sustainable', 'Moderate']
                         }
                         return risk_appetite_map.get(risk_type, [])
-
+                    
                     # Check for required columns before applying further filtering
                     if 'inherent_risk_rating' in filtered_data.columns and 'residual_risk_rating' in filtered_data.columns and 'risk_type' in filtered_data.columns:
                         filtered_data['risk_appetite'] = filtered_data['risk_type'].apply(get_risk_appetite)
@@ -1569,58 +1580,77 @@ def main():
                               
         elif tab == 'Update Risk':
             st.subheader('Update Risk in Risk Data')
+            # Fetch the current 'risk_type' from the selected row
             if not st.session_state['risk_data'].empty:
                 # Fetch the risk descriptions for selection
                 risk_to_update = st.selectbox('Select a risk to update', fetch_all_from_risk_data()['risk_description'].tolist())
-                # Select the row corresponding to the selected risk description
-                selected_risk_row = st.session_state['risk_data'][st.session_state['risk_data']['risk_description'] == risk_to_update].iloc[0]
 
-                # Display fields for updating the risk
-                updated_risk_description = st.text_input('risk_description', value=selected_risk_row['risk_description'])
-                updated_cause_consequences = st.text_input('cause_consequences', value=selected_risk_row['cause_consequences'])
-                updated_risk_owners = st.text_input('risk_owners', value=selected_risk_row['risk_owners'])
-                updated_inherent_risk_probability = st.selectbox('inherent_risk_probability', list(risk_levels.keys()), index=list(risk_levels.keys()).index(selected_risk_row['inherent_risk_probability']))
-                updated_inherent_risk_impact = st.selectbox('inherent_risk_impact', list(risk_levels.keys()), index=list(risk_levels.keys()).index(selected_risk_row['inherent_risk_impact']))
-                updated_controls = st.text_input('controls', value=selected_risk_row['controls'])
-                updated_control_owners = st.text_input('control_owners', value=selected_risk_row['control_owners'])
-                updated_residual_risk_probability = st.selectbox('residual_risk_probability', list(risk_levels.keys()), index=list(risk_levels.keys()).index(selected_risk_row['residual_risk_probability']))
-                updated_residual_risk_impact = st.selectbox('residual_risk_impact', list(risk_levels.keys()), index=list(risk_levels.keys()).index(selected_risk_row['residual_risk_impact']))
-                updated_by = st.text_input('updated_by', value=selected_risk_row['updated_by'])
-                updated_date_last_updated = st.date_input('date_last_updated', value=selected_risk_row['date_last_updated'])
+                # Filter the DataFrame for the selected risk description
+                filtered_risk_data = st.session_state['risk_data'][st.session_state['risk_data']['risk_description'] == risk_to_update]
 
-                # New field for updating Subsidiary
-                updated_subsidiary = st.selectbox('Subsidiary', sorted([
-                    'Varichem Pharmaceuticals', 'Greenwood Pharmacy', 'Greenwood Wholesalers',
-                    'Prochem', 'Kasuru Investments', 'Varifreight', 'Variplastics'
-                ]), index=sorted([
-                    'Varichem Pharmaceuticals', 'Greenwood Pharmacy', 'Greenwood Wholesalers',
-                    'Prochem', 'Kasuru Investments', 'Varifreight', 'Variplastics'
-                ]).index(selected_risk_row['Subsidiary']))
+                if not filtered_risk_data.empty:
+                    # Select the row corresponding to the selected risk description
+                    selected_risk_row = filtered_risk_data.iloc[0]
 
-                if st.button('Update Risk'):
-                    updated_risk = {
-                        'risk_type': st.session_state['risk_type'],
-                        'updated_by': updated_by,
-                        'date_last_updated': updated_date_last_updated.strftime('%Y-%m-%d'),
-                        'risk_description': updated_risk_description,
-                        'cause_consequences': updated_cause_consequences,
-                        'risk_owners': updated_risk_owners,
-                        'inherent_risk_probability': updated_inherent_risk_probability,
-                        'inherent_risk_impact': updated_inherent_risk_impact,
-                        'inherent_risk_rating': calculate_risk_rating(updated_inherent_risk_probability, updated_inherent_risk_impact),
-                        'controls': updated_controls,
-                        'control_owners': updated_control_owners,
-                        'residual_risk_probability': updated_residual_risk_probability,
-                        'residual_risk_impact': updated_residual_risk_impact,
-                        'residual_risk_rating': calculate_risk_rating(updated_residual_risk_probability, updated_residual_risk_impact),
-                        'Subsidiary': updated_subsidiary  # Include the updated subsidiary in the risk update
-                    }
+                    # Allow user to change the 'risk_type' with the current value pre-selected
+                    st.session_state['risk_type'] = st.selectbox('Risk Type', sorted([
+                                'Strategic Risk', 'Operational Risk', 'Economic Risk', 
+                                'Legal Risk', 'Compliance Risk', 'Natural Disaster',
+                                'Security Risk', 'Financial Risk', 'Project Risk'
+                            ]), index=sorted([
+                                'Strategic Risk', 'Operational Risk', 'Economic Risk', 
+                                'Legal Risk', 'Compliance Risk', 'Natural Disaster',
+                                'Security Risk', 'Financial Risk', 'Project Risk'
+                            ]).index(selected_risk_row['risk_type']))
 
-                    old_data = st.session_state['risk_data'].copy()
-                    update_risk_data_by_risk_description(risk_to_update, updated_risk)
-                    st.session_state['risk_data'] = fetch_all_from_risk_data()
-                    if not old_data.equals(st.session_state['risk_data']):
-                        st.write("Risk updated.")
+                    # Display fields for updating the risk
+                    updated_risk_description = st.text_input('risk_description', value=selected_risk_row['risk_description'])
+                    updated_cause_consequences = st.text_input('cause_consequences', value=selected_risk_row['cause_consequences'])
+                    updated_risk_owners = st.text_input('risk_owners', value=selected_risk_row['risk_owners'])
+                    updated_inherent_risk_probability = st.selectbox('inherent_risk_probability', list(risk_levels.keys()), index=list(risk_levels.keys()).index(selected_risk_row['inherent_risk_probability']))
+                    updated_inherent_risk_impact = st.selectbox('inherent_risk_impact', list(risk_levels.keys()), index=list(risk_levels.keys()).index(selected_risk_row['inherent_risk_impact']))
+                    updated_controls = st.text_input('controls', value=selected_risk_row['controls'])
+                    updated_control_owners = st.text_input('control_owners', value=selected_risk_row['control_owners'])
+                    updated_residual_risk_probability = st.selectbox('residual_risk_probability', list(risk_levels.keys()), index=list(risk_levels.keys()).index(selected_risk_row['residual_risk_probability']))
+                    updated_residual_risk_impact = st.selectbox('residual_risk_impact', list(risk_levels.keys()), index=list(risk_levels.keys()).index(selected_risk_row['residual_risk_impact']))
+                    updated_by = st.text_input('updated_by', value=selected_risk_row['updated_by'])
+                    updated_date_last_updated = st.date_input('date_last_updated', value=selected_risk_row['date_last_updated'])
+
+                    # New field for updating Subsidiary
+                    updated_subsidiary = st.selectbox('Subsidiary', sorted([
+                        'Varichem Pharmaceuticals', 'Greenwood Pharmacy', 'Greenwood Wholesalers',
+                        'Prochem', 'Kasuru Investments', 'Varifreight', 'Variplastics'
+                    ]), index=sorted([
+                        'Varichem Pharmaceuticals', 'Greenwood Pharmacy', 'Greenwood Wholesalers',
+                        'Prochem', 'Kasuru Investments', 'Varifreight', 'Variplastics'
+                    ]).index(selected_risk_row['Subsidiary']))
+
+                    if st.button('Update Risk'):
+                        updated_risk = {
+                            'risk_type': st.session_state['risk_type'],
+                            'updated_by': updated_by,
+                            'date_last_updated': updated_date_last_updated.strftime('%Y-%m-%d'),
+                            'risk_description': updated_risk_description,
+                            'cause_consequences': updated_cause_consequences,
+                            'risk_owners': updated_risk_owners,
+                            'inherent_risk_probability': updated_inherent_risk_probability,
+                            'inherent_risk_impact': updated_inherent_risk_impact,
+                            'inherent_risk_rating': calculate_risk_rating(updated_inherent_risk_probability, updated_inherent_risk_impact),
+                            'controls': updated_controls,
+                            'control_owners': updated_control_owners,
+                            'residual_risk_probability': updated_residual_risk_probability,
+                            'residual_risk_impact': updated_residual_risk_impact,
+                            'residual_risk_rating': calculate_risk_rating(updated_residual_risk_probability, updated_residual_risk_impact),
+                            'Subsidiary': updated_subsidiary  # Include the updated subsidiary in the risk update
+                        }
+
+                        old_data = st.session_state['risk_data'].copy()
+                        update_risk_data_by_risk_description(risk_to_update, updated_risk)
+                        st.session_state['risk_data'] = fetch_all_from_risk_data()
+                        if not old_data.equals(st.session_state['risk_data']):
+                            st.write("Risk updated.")
+                else:
+                    st.write("No matching risk found to update.")
             else:
                 st.write("No risks to update.")
 
