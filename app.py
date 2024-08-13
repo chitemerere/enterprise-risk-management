@@ -439,14 +439,13 @@ def change_password(username, current_password, new_password):
 # Define the risk appetite based on risk type
 def get_risk_appetite(risk_type):
     risk_appetite_map = {
-        'Strategic Risk': ['Critical', 'Severe'],
-        'Operational Risk': ['Sustainable', 'Moderate'],
-        'Economic Risk': ['Sustainable', 'Moderate'],
+        'Strategic Risk': ['Sustainable', 'Moderate', 'Critical', 'Severe'],
+        'Operational Risk': ['Sustainable', 'Moderate', 'Critical'],
+        'Economic Risk': ['Sustainable', 'Moderate', 'Critical'],
         'Compliance Risk': ['Sustainable', 'Moderate'],
-        'Project Risk': ['Sustainable', 'Moderate'],
+        'Project Risk': ['Sustainable', 'Moderate', 'Critical', 'Severe'],
         'Legal Risk': ['Sustainable', 'Moderate'],
-        'Financial Risk': ['Moderate', 'Moderate'],
-        'ESG Related Risk': ['Sustainable', 'Moderate', 'Severe', 'Critical'],
+        'Financial Risk': ['Sustainable', 'Moderate'],
         'Security Risk': ['Sustainable', 'Moderate']
     }
     return risk_appetite_map.get(risk_type, [])
@@ -652,15 +651,14 @@ def main():
             
             # Define risk types and their corresponding appetite levels
             risk_data = [
-                ("Strategic Risk", "Severe", "Critical"),
-                ("Operational Risk", "Sustainable", "Moderate"),
-                ("Economic Risk", "Sustainable", "Moderate"),
-                ("Project Risk", "Sustainable", "Moderate"),
+                ("Strategic Risk", "Sustainable", "Moderate", "Severe", "Critical"),
+                ("Operational Risk", "Sustainable", "Moderate", "Severe"),
+                ("Economic Risk", "Sustainable", "Moderate", "Severe"),
+                ("Project Risk", "Sustainable", "Moderate","Severe", "Critical"),
                 ("Compliance Risk", "Sustainable", "Moderate"),
-                ("Financial Risk", "Moderate", "Moderate"),
+                ("Financial Risk", "Sustainable", "Moderate", "Severe"),
                 ("Legal Risk", "Sustainable", "Moderate"),
-                ("ESG Related Risk", "Sustainable", "Moderate", "Severe", "Critical"),
-                ("Security Risk", "Sustainable", "Moderate")
+                ("Security Risk", "Sustainable", "Moderate", "Severe")
             ]
             
             # Sort the risks alphabetically by the first element in each tuple
@@ -746,7 +744,7 @@ def main():
           
             st.session_state['risk_type'] = st.selectbox('Risk Type', sorted([
                 'Strategic Risk', 'Operational Risk', 'Economic Risk', 
-                'Legal Risk', 'Compliance Risk', 'ESG Related Risk',
+                'Legal Risk', 'Compliance Risk',
                 'Security Risk', 'Financial Risk', 'Project Risk'
             ]))
 
@@ -1547,11 +1545,11 @@ def main():
                     # Allow user to change the 'risk_type' with the current value pre-selected
                     st.session_state['risk_type'] = st.selectbox('Risk Type', sorted([
                                 'Strategic Risk', 'Operational Risk', 'Economic Risk', 
-                                'Legal Risk', 'Compliance Risk', 'ESG Related Risk',
+                                'Legal Risk', 'Compliance Risk', 
                                 'Security Risk', 'Financial Risk', 'Project Risk'
                             ]), index=sorted([
                                 'Strategic Risk', 'Operational Risk', 'Economic Risk', 
-                                'Legal Risk', 'Compliance Risk', 'ESG Related Risk',
+                                'Legal Risk', 'Compliance Risk', 
                                 'Security Risk', 'Financial Risk', 'Project Risk'
                             ]).index(selected_risk_row['risk_type']))
 
