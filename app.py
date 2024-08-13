@@ -435,6 +435,21 @@ def change_password(username, current_password, new_password):
         logging.error("Failed to connect to the database.")
         st.sidebar.error("Could not connect to the database.")
         return False
+    
+# Define the risk appetite based on risk type
+def get_risk_appetite(risk_type):
+    risk_appetite_map = {
+        'Strategic Risk': ['Critical', 'Severe'],
+        'Operational Risk': ['Sustainable', 'Moderate'],
+        'Economic Risk': ['Sustainable', 'Moderate'],
+        'Compliance Risk': ['Sustainable', 'Moderate'],
+        'Project Risk': ['Sustainable', 'Moderate'],
+        'Legal Risk': ['Sustainable', 'Moderate'],
+        'Financial Risk': ['Moderate', 'Moderate'],
+        'ESG Related Risk': ['Sustainable', 'Moderate', 'Severe', 'Critical'],
+        'Security Risk': ['Sustainable', 'Moderate']
+    }
+    return risk_appetite_map.get(risk_type, [])
 
 def main():
     st.image("logo.png", width=200)
@@ -644,7 +659,7 @@ def main():
                 ("Compliance Risk", "Sustainable", "Moderate"),
                 ("Financial Risk", "Moderate", "Moderate"),
                 ("Legal Risk", "Sustainable", "Moderate"),
-                ("Natural Disaster", "Sustainable", "Moderate"),
+                ("ESG Related Risk", "Sustainable", "Moderate", "Severe", "Critical"),
                 ("Security Risk", "Sustainable", "Moderate")
             ]
             
@@ -663,11 +678,17 @@ def main():
             fig, ax = plt.subplots(figsize=(12, 8))
 
             # Plot rectangles for each risk type
-            for i, (risk_type, appetite1, appetite2) in enumerate(risk_data):
-                ax.add_patch(plt.Rectangle((0, i), 0.5, 1, facecolor=color_map[appetite1], edgecolor='black'))
-                ax.add_patch(plt.Rectangle((0.5, i), 0.5, 1, facecolor=color_map[appetite2], edgecolor='black'))
-                ax.text(0.25, i + 0.5, appetite1, ha='center', va='center', fontsize=16)
-                ax.text(0.75, i + 0.5, appetite2, ha='center', va='center', fontsize=16)
+            for i, risk in enumerate(risk_data):
+                risk_type = risk[0]
+                appetites = risk[1:]  # All appetite levels after the risk type
+                num_levels = len(appetites)
+
+                # Determine the width of each rectangle based on the number of levels
+                rect_width = 1.0 / num_levels
+
+                for j, appetite in enumerate(appetites):
+                    ax.add_patch(plt.Rectangle((j * rect_width, i), rect_width, 1, facecolor=color_map[appetite], edgecolor='black'))
+                    ax.text((j + 0.5) * rect_width, i + 0.5, appetite, ha='center', va='center', fontsize=16)
 
             # Set y-axis ticks and labels
             ax.set_yticks(np.arange(len(risk_data)) + 0.5)
@@ -690,7 +711,7 @@ def main():
             # Adjust layout and display
             plt.tight_layout()
             plt.ylabel('Risks', fontsize=18)
-           
+
             if fig:
                 # Display the figure in the Streamlit app
                 st.pyplot(fig)
@@ -725,7 +746,7 @@ def main():
           
             st.session_state['risk_type'] = st.selectbox('Risk Type', sorted([
                 'Strategic Risk', 'Operational Risk', 'Economic Risk', 
-                'Legal Risk', 'Compliance Risk', 'Natural Disaster',
+                'Legal Risk', 'Compliance Risk', 'ESG Related Risk',
                 'Security Risk', 'Financial Risk', 'Project Risk'
             ]))
 
@@ -881,21 +902,6 @@ def main():
 
             st.subheader('Risk Register')
             
-            # Define the risk appetite based on risk type
-            def get_risk_appetite(risk_type):
-                risk_appetite_map = {
-                    'Strategic Risk': ['Critical', 'Severe'],
-                    'Operational Risk': ['Sustainable', 'Moderate'],
-                    'Economic Risk': ['Sustainable', 'Moderate'],
-                    'Compliance Risk': ['Sustainable', 'Moderate'],
-                    'Project Risk': ['Sustainable', 'Moderate'],
-                    'Legal Risk': ['Sustainable', 'Moderate'],
-                    'Financial Risk': ['Moderate', 'Moderate'],
-                    'Natural Disaster': ['Sustainable', 'Moderate'],
-                    'Security Risk': ['Sustainable', 'Moderate']
-                }
-                return risk_appetite_map.get(risk_type, [])
-
             # Check for required columns before applying further filtering
             if 'inherent_risk_rating' in filtered_data.columns and 'residual_risk_rating' in filtered_data.columns and 'risk_type' in filtered_data.columns:
                 filtered_data['risk_appetite'] = filtered_data['risk_type'].apply(get_risk_appetite)
@@ -1089,21 +1095,7 @@ def main():
                 # After Risk Appetite Analysis
                 st.subheader('After Risk Appetite')
                     
-                # Define the risk appetite based on risk type
-                def get_risk_appetite(risk_type):
-                    risk_appetite_map = {
-                        'Strategic Risk': ['Critical', 'Severe'],
-                        'Operational Risk': ['Sustainable', 'Moderate'],
-                        'Economic Risk': ['Sustainable', 'Moderate'],
-                        'Compliance Risk': ['Sustainable', 'Moderate'],
-                        'Project Risk': ['Sustainable', 'Moderate'],
-                        'Legal Risk': ['Sustainable', 'Moderate'],
-                        'Financial Risk': ['Moderate', 'Moderate'],
-                        'Natural Disaster': ['Sustainable', 'Moderate'],
-                        'Security Risk': ['Sustainable', 'Moderate']
-                    }
-                    return risk_appetite_map.get(risk_type, [])
-                
+            
                 # Check for required columns before applying further filtering
                 if 'inherent_risk_rating' in filtered_data.columns and 'residual_risk_rating' in filtered_data.columns and 'risk_type' in filtered_data.columns:
                     filtered_data['risk_appetite'] = filtered_data['risk_type'].apply(get_risk_appetite)
@@ -1469,21 +1461,7 @@ def main():
 
                     st.subheader('After Risk Appetite')
                         
-                    # Define the risk appetite based on risk type
-                    def get_risk_appetite(risk_type):
-                        risk_appetite_map = {
-                            'Strategic Risk': ['Critical', 'Severe'],
-                            'Operational Risk': ['Sustainable', 'Moderate'],
-                            'Economic Risk': ['Sustainable', 'Moderate'],
-                            'Compliance Risk': ['Sustainable', 'Moderate'],
-                            'Project Risk': ['Sustainable', 'Moderate'],
-                            'Legal Risk': ['Sustainable', 'Moderate'],
-                            'Financial Risk': ['Moderate', 'Moderate'],
-                            'Natural Disaster': ['Sustainable', 'Moderate'],
-                            'Security Risk': ['Sustainable', 'Moderate']
-                        }
-                        return risk_appetite_map.get(risk_type, [])
-                    
+                                       
                     # Check for required columns before applying further filtering
                     if 'inherent_risk_rating' in filtered_data.columns and 'residual_risk_rating' in filtered_data.columns and 'risk_type' in filtered_data.columns:
                         filtered_data['risk_appetite'] = filtered_data['risk_type'].apply(get_risk_appetite)
@@ -1569,11 +1547,11 @@ def main():
                     # Allow user to change the 'risk_type' with the current value pre-selected
                     st.session_state['risk_type'] = st.selectbox('Risk Type', sorted([
                                 'Strategic Risk', 'Operational Risk', 'Economic Risk', 
-                                'Legal Risk', 'Compliance Risk', 'Natural Disaster',
+                                'Legal Risk', 'Compliance Risk', 'ESG Related Risk',
                                 'Security Risk', 'Financial Risk', 'Project Risk'
                             ]), index=sorted([
                                 'Strategic Risk', 'Operational Risk', 'Economic Risk', 
-                                'Legal Risk', 'Compliance Risk', 'Natural Disaster',
+                                'Legal Risk', 'Compliance Risk', 'ESG Related Risk',
                                 'Security Risk', 'Financial Risk', 'Project Risk'
                             ]).index(selected_risk_row['risk_type']))
 
