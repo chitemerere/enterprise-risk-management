@@ -644,7 +644,7 @@ def main():
                 ("Compliance Risk", "Sustainable", "Moderate"),
                 ("Financial Risk", "Moderate", "Moderate"),
                 ("Legal Risk", "Sustainable", "Moderate"),
-                ("Natural Disasters", "Sustainable", "Moderate"),
+                ("Natural Disaster", "Sustainable", "Moderate"),
                 ("Security Risk", "Sustainable", "Moderate")
             ]
             
@@ -719,25 +719,8 @@ def main():
         elif tab == 'Main Application':
             if 'risk_data' not in st.session_state:
                 st.session_state['risk_data'] = fetch_all_from_risk_data() 
-                
-            st.sidebar.subheader('Upload Risk Data')
-            uploaded_file = st.sidebar.file_uploader("Choose a CSV file", type="csv")
-            if uploaded_file:
-                if st.sidebar.button("Upload"):
-                    data = pd.read_csv(uploaded_file)
-                    required_columns = [
-                        'risk_description', 'risk_type', 'updated_by', 'date_last_updated',
-                        'cause_consequences', 'risk_owners', 'inherent_risk_probability', 
-                        'inherent_risk_impact', 'inherent_risk_rating', 'control_owners',
-                        'residual_risk_probability', 'residual_risk_impact', 'residual_risk_rating', 
-                        'controls'
-                    ]
-                    if set(required_columns).issubset(data.columns):
-                        insert_uploaded_data_to_db(data)
-                        st.sidebar.success("Data uploaded successfully!")
-                    else:
-                        st.sidebar.error("The uploaded file does not have the required columns")
-            
+         
+           
             st.subheader('Enter Risk Details')
           
             st.session_state['risk_type'] = st.selectbox('Risk Type', sorted([
@@ -801,15 +784,6 @@ def main():
                     insert_risks_into_risk_register(st.session_state['risk_register'])
                 except Exception as e:
                     st.write(f"Error inserting into risk_register: {e}")
-
-                risks_outside_appetite = fetch_risks_outside_appetite_from_risk_data(risk_appetite_values)
-
-                if not risks_outside_appetite.empty:
-                    try:
-                        risk_data_dict = risks_outside_appetite.iloc[0].to_dict()
-                        insert_risks_into_risk_register(risk_data_dict)
-                    except Exception as e:
-                        st.write(f"Error inserting into risk_register: {e}")
 
             st.subheader('Risk Filters')
             
@@ -917,7 +891,7 @@ def main():
                     'Project Risk': ['Sustainable', 'Moderate'],
                     'Legal Risk': ['Sustainable', 'Moderate'],
                     'Financial Risk': ['Moderate', 'Moderate'],
-                    'Natural Disasters': ['Sustainable', 'Moderate'],
+                    'Natural Disaster': ['Sustainable', 'Moderate'],
                     'Security Risk': ['Sustainable', 'Moderate']
                 }
                 return risk_appetite_map.get(risk_type, [])
@@ -1125,7 +1099,7 @@ def main():
                         'Project Risk': ['Sustainable', 'Moderate'],
                         'Legal Risk': ['Sustainable', 'Moderate'],
                         'Financial Risk': ['Moderate', 'Moderate'],
-                        'Natural Disasters': ['Sustainable', 'Moderate'],
+                        'Natural Disaster': ['Sustainable', 'Moderate'],
                         'Security Risk': ['Sustainable', 'Moderate']
                     }
                     return risk_appetite_map.get(risk_type, [])
@@ -1505,7 +1479,7 @@ def main():
                             'Project Risk': ['Sustainable', 'Moderate'],
                             'Legal Risk': ['Sustainable', 'Moderate'],
                             'Financial Risk': ['Moderate', 'Moderate'],
-                            'Natural Disasters': ['Sustainable', 'Moderate'],
+                            'Natural Disaster': ['Sustainable', 'Moderate'],
                             'Security Risk': ['Sustainable', 'Moderate']
                         }
                         return risk_appetite_map.get(risk_type, [])
