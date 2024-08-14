@@ -741,13 +741,13 @@ def main():
         elif tab == 'Main Application':
             if 'risk_data' not in st.session_state:
                 st.session_state['risk_data'] = fetch_all_from_risk_data() 
-         
-           
+            
+                     
             st.subheader('Enter Risk Details')
           
             st.session_state['risk_type'] = st.selectbox('Risk Type', sorted([
                 'Strategic Risk', 'Operational Risk', 'Economic Risk', 
-                'Legal Risk', 'Compliance Risk',
+                'Legal Risk', 'Compliance Risk', 
                 'Security Risk', 'Financial Risk', 'Project Risk'
             ]))
 
@@ -798,15 +798,6 @@ def main():
                 except Exception as e:
                     st.write(f"Error inserting into risk_data: {e}")
                 
-                st.session_state['risk_data'] = fetch_all_from_risk_data()
-                risk_appetite_values = st.session_state['risk_appetite']
-                st.session_state['risk_register'] = fetch_risks_outside_appetite_from_risk_data(risk_appetite_values)
-
-                try:
-                    insert_risks_into_risk_register(st.session_state['risk_register'])
-                except Exception as e:
-                    st.write(f"Error inserting into risk_register: {e}")
-
             st.subheader('Risk Filters')
             
             # Load or fetch data
@@ -1095,8 +1086,7 @@ def main():
 
                 # After Risk Appetite Analysis
                 st.subheader('After Risk Appetite')
-                    
-            
+                              
                 # Check for required columns before applying further filtering
                 if 'inherent_risk_rating' in filtered_data.columns and 'residual_risk_rating' in filtered_data.columns and 'risk_type' in filtered_data.columns:
                     filtered_data['risk_appetite'] = filtered_data['risk_type'].apply(get_risk_appetite)
@@ -1462,7 +1452,6 @@ def main():
 
                     st.subheader('After Risk Appetite')
                         
-                                       
                     # Check for required columns before applying further filtering
                     if 'inherent_risk_rating' in filtered_data.columns and 'residual_risk_rating' in filtered_data.columns and 'risk_type' in filtered_data.columns:
                         filtered_data['risk_appetite'] = filtered_data['risk_type'].apply(get_risk_appetite)
