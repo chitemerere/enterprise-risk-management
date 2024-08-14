@@ -606,6 +606,9 @@ def main():
 
         if 'risk_type' not in st.session_state:
             st.session_state['risk_type'] = ''
+            
+        if 'risk_appetite' not in st.session_state:
+            st.session_state['risk_appetite'] = ''
 
         if 'updated_by' not in st.session_state:
             st.session_state['updated_by'] = ''
