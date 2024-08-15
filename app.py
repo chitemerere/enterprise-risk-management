@@ -1557,7 +1557,7 @@ def main():
                 if st.button('Delete Risk'):
                     initial_count = len(st.session_state['risk_data'])
                     delete_from_risk_data_by_risk_description(risk_to_delete)
-                    st.session_state['risk_data'] = fetch_all_from_risk_data()
+                    st.session_state['risk_data'] = fetch_all_from_risk_data(engine)
                     if len(st.session_state['risk_data']) < initial_count:
                         st.write("Risk deleted.")
             else:
@@ -1634,7 +1634,7 @@ def main():
 
                         old_data = st.session_state['risk_data'].copy()
                         update_risk_data_by_risk_description(risk_to_update, updated_risk)
-                        st.session_state['risk_data'] = fetch_all_from_risk_data()
+                        st.session_state['risk_data'] = fetch_all_from_risk_data(engine)
                         if not old_data.equals(st.session_state['risk_data']):
                             st.write("Risk updated.")
                 else:
