@@ -1549,8 +1549,11 @@ def main():
            
         elif tab == 'Delete Risk':
             st.subheader('Delete Risk from Risk Data')
+            
+            engine = connect_to_db()
+            
             if not st.session_state['risk_data'].empty:
-                risk_to_delete = st.selectbox('Select a risk to delete', fetch_all_from_risk_data()['risk_description'].tolist())
+                risk_to_delete = st.selectbox('Select a risk to delete', fetch_all_from_risk_data(engine)['risk_description'].tolist())
                 if st.button('Delete Risk'):
                     initial_count = len(st.session_state['risk_data'])
                     delete_from_risk_data_by_risk_description(risk_to_delete)
@@ -1562,10 +1565,13 @@ def main():
                               
         elif tab == 'Update Risk':
             st.subheader('Update Risk in Risk Data')
+            
+            engine = connect_to_db()
+            
             # Fetch the current 'risk_type' from the selected row
             if not st.session_state['risk_data'].empty:
                 # Fetch the risk descriptions for selection
-                risk_to_update = st.selectbox('Select a risk to update', fetch_all_from_risk_data()['risk_description'].tolist())
+                risk_to_update = st.selectbox('Select a risk to update', fetch_all_from_risk_data(engine)['risk_description'].tolist())
 
                 # Filter the DataFrame for the selected risk description
                 filtered_risk_data = st.session_state['risk_data'][st.session_state['risk_data']['risk_description'] == risk_to_update]
