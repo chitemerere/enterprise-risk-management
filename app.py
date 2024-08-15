@@ -622,6 +622,8 @@ def main():
         )
 
         if 'risk_data' not in st.session_state:
+            
+            engine = connect_to_db()
 
             st.session_state['risk_data'] = fetch_all_from_risk_data(engine)
             if st.session_state['risk_data'].empty:
