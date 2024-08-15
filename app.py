@@ -623,7 +623,7 @@ def main():
 
         if 'risk_data' not in st.session_state:
 
-            st.session_state['risk_data'] = fetch_all_from_risk_data()
+            st.session_state['risk_data'] = fetch_all_from_risk_data(engine)
             if st.session_state['risk_data'].empty:
                 st.session_state['risk_data'] = pd.DataFrame(columns=[
                     'risk_description', 'cause_consequences', 'risk_owners', 
