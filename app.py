@@ -19,6 +19,7 @@ import pymysql
 from sqlalchemy import create_engine, text
 import logging
 import io
+import time
 
 # Configure logging
 logging.basicConfig(filename='application.log', level=logging.INFO)
@@ -42,7 +43,19 @@ def connect_to_db():
         st.sidebar.warning(f"Error: {err}")
         logging.error(f"Database connection error: {err}")
         return None
-  
+    
+# Function to fetch latest data from the database
+def fetch_latest_data(engine):
+    try:
+        with engine.connect() as connection:
+            # Replace 'risk_data' with your actual table name
+            result = connection.execute(text("SELECT * FROM risk_data ORDER BY date_last_updated DESC LIMIT 1"))
+            latest_data = result.fetchone()
+            return latest_data
+    except Exception as e:
+        st.error(f"An error occurred while fetching the latest data: {e}")
+        return None
+
 def fetch_risk_register_from_db():
     engine = connect_to_db()
     if engine:
@@ -92,17 +105,24 @@ def insert_uploaded_data_to_db(dataframe):
                 logging.error(f"Error inserting data: {e}")
                 st.sidebar.error(f"Error inserting data: {e}")
         engine.dispose()
-
+        
 def insert_into_risk_data(data):
     engine = connect_to_db()
     if engine:
         with engine.connect() as connection:
             transaction = connection.begin()
             try:
-                placeholders = ', '.join([':{}'.format(key) for key in data.keys()])
+                # Construct placeholders and columns from the data dictionary
+                placeholders = ', '.join([f":{key}" for key in data.keys()])
                 columns = ', '.join([f"`{key}`" for key in data.keys()])
+                
+                # Prepare the query using the text function
                 query = text(f"INSERT INTO risk_data ({columns}) VALUES ({placeholders})")
-                connection.execute(query, data)
+                
+                # Execute the query with the data dictionary
+                connection.execute(query, data)  # Pass the data as a dictionary
+                
+                # Commit the transaction
                 transaction.commit()
                 logging.info(f"Inserted data: {data}")
             except Exception as e:
@@ -110,15 +130,26 @@ def insert_into_risk_data(data):
                 st.write(f"Error during insertion to risk_data: {e}")
                 logging.error(f"Error during insertion: {e}")
         engine.dispose()
-
-def fetch_all_from_risk_data():
-    engine = connect_to_db()
-    if engine:
-        query = "SELECT * FROM risk_data"
-        data = pd.read_sql(query, engine)
-        engine.dispose()
-        return data
-    return pd.DataFrame()
+        
+# Function to fetch the latest data from the database
+def fetch_latest_data(engine):
+    try:
+        with engine.connect() as connection:
+            result = connection.execute(text("SELECT * FROM risk_data ORDER BY date_last_updated DESC"))
+            return result.fetchall()
+    except Exception as e:
+        st.error(f"An error occurred while fetching the latest data: {e}")
+        return None
+    
+# Fetch all data from the database
+def fetch_all_from_risk_data(engine):
+    try:
+        with engine.connect() as connection:
+            result = connection.execute(text("SELECT * FROM risk_data ORDER BY date_last_updated DESC"))
+            return pd.DataFrame(result.fetchall(), columns=result.keys())
+    except Exception as e:
+        st.error(f"An error occurred while fetching data: {e}")
+        return pd.DataFrame()
 
 def delete_from_risk_data_by_risk_description(risk_description):
     if 'user_role' in st.session_state and st.session_state.user_role == 'admin':
@@ -453,7 +484,7 @@ def get_risk_appetite(risk_type):
 def main():
     st.image("logo.png", width=200)
     st.markdown('### Enterprise Risk Assessment Application')
-    
+     
     if not st.session_state.logged_in:
         st.sidebar.header("Login")
         username = st.sidebar.text_input("Username", key="login_username")
@@ -741,8 +772,7 @@ def main():
         elif tab == 'Main Application':
             if 'risk_data' not in st.session_state:
                 st.session_state['risk_data'] = fetch_all_from_risk_data() 
-            
-                     
+                                 
             st.subheader('Enter Risk Details')
           
             st.session_state['risk_type'] = st.selectbox('Risk Type', sorted([
@@ -768,7 +798,9 @@ def main():
                 'Varichem Pharmaceuticals', 'Greenwood Pharmacy', 'Greenwood Wholesalers',
                 'Prochem', 'Kasuru Investments', 'Varifreight', 'Variplastics'
             ]))
-
+            
+            engine = connect_to_db()
+            
             if st.button('Enter Risk'):
                 inherent_risk_rating = calculate_risk_rating(inherent_risk_probability, inherent_risk_impact)
                 residual_risk_rating = calculate_risk_rating(residual_risk_probability, residual_risk_impact)
@@ -791,21 +823,27 @@ def main():
                     'subsidiary': st.session_state['subsidiary']  # Include the new field in the risk entry
                 }
 
-                 
                 try:
                     insert_into_risk_data(new_risk)
-                    st.write("New risk data successfully entered")
+                    st.success("New risk data successfully entered")
+
+                    # Fetch and display the latest data after insertion
+                    risk_data = fetch_all_from_risk_data(engine)  # Fetch fresh data
+                    st.session_state['risk_data'] = risk_data  # Update session state with the latest data
+
                 except Exception as e:
-                    st.write(f"Error inserting into risk_data: {e}")
-                
+                    st.error(f"Error inserting into risk_data: {e}")
+                       
             st.subheader('Risk Filters')
-            
+        
+            engine = connect_to_db()
+
             # Load or fetch data
-            risk_data = st.session_state.get('risk_data', fetch_all_from_risk_data())
+            risk_data = st.session_state.get('risk_data', fetch_all_from_risk_data(engine))
 
             # Initialize filtered_data as an empty DataFrame
             filtered_data = pd.DataFrame()
-
+            
             # Define colors for each risk rating
             colors = {
                 'Sustainable': 'background-color: green',
@@ -1599,4 +1637,10 @@ def main():
 if __name__ == '__main__':
     main()
         
+
+
+# In[ ]:
+
+
+
 
