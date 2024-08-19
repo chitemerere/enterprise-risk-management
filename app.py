@@ -998,8 +998,10 @@ def main():
             st.header('Risks Dashboard')
             st.subheader('Risk Filters')
             
+            engine = connect_to_db()
+            
             # Load data from session state
-            risk_data = st.session_state.get('risk_data', fetch_all_from_risk_data())
+            risk_data = st.session_state.get('risk_data', fetch_all_from_risk_data(engine))
 
             # Initialize filtered_data as an empty DataFrame
             filtered_data = pd.DataFrame()
@@ -1215,9 +1217,11 @@ def main():
                 }
             </style>
             """, unsafe_allow_html=True)
+            
+            engine = connect_to_db()
 
             if 'risk_data' not in st.session_state:
-                st.session_state['risk_data'] = fetch_all_from_risk_data()
+                st.session_state['risk_data'] = fetch_all_from_risk_data(engine)
 
             st.subheader('Risks Owners & Control Owners')
             
@@ -1364,8 +1368,10 @@ def main():
             def highlight_risk(rating):
                 return colors.get(rating, '')
             
+            engine = connect_to_db()
+            
             # Load or fetch data
-            risk_data = st.session_state.get('risk_data', fetch_all_from_risk_data())
+            risk_data = st.session_state.get('risk_data', fetch_all_from_risk_data(engine))
 
             # Initialize filtered_data as an empty DataFrame
             filtered_data = pd.DataFrame()
